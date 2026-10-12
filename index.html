@@ -325,7 +325,10 @@ function openPicker(mode, arg) {
   sheet(`<h2>${mode === 'add' ? `${arg}に追加` : '食品を差し替え'}<button onclick="closeSheet()">閉じる</button></h2>
     <input id="pq" placeholder="検索" oninput="picker.q=this.value;renderPicks()">
     <div id="picks" class="list"></div>
-    <button class="btn-soft" onclick="openNewFood()">＋ 新しい食品を登録</button>
+    <div class="grid2" style="margin-top:10px">
+      <button class="btn-soft" style="margin:0" onclick="pickPhoto()">写真から読み取る</button>
+      <button class="btn-soft" style="margin:0" onclick="openNewFood()">＋ 手入力で登録</button>
+    </div>
     ${mode === 'replace' ? `<button class="btn-danger" onclick="closeSheet();removeItem(${arg})">この食品を削除</button>` : ''}`);
   renderPicks();
 }
@@ -346,18 +349,61 @@ function pick(name) {
   closeSheet(); touch();
 }
 
-function openNewFood() {
-  sheet(`<h2>新しい食品を登録<button onclick="openPicker(picker.mode, picker.arg)">戻る</button></h2>
-    <input id="nf-name" placeholder="食品名（例：サバ缶）">
+function openNewFood(v) {
+  v = v || {};
+  const val = x => x == null || x === '' ? '' : esc(x);
+  const lbl = t => `<span class="sub" style="display:block;margin:8px 0 2px">${t}</span>`;
+  sheet(`<h2>${v.name != null ? '読み取り結果を確認' : '新しい食品を登録'}<button onclick="openPicker(picker.mode, picker.arg)">戻る</button></h2>
+    ${v.note ? `<div class="status ${v.source === 'estimate' ? 'copied' : 'ok'}" style="margin:0 0 8px">${v.source === 'estimate' ? '写真からの推定値です。' : '栄養成分表示から読み取りました。'}${esc(v.note)}</div>` : ''}
+    ${lbl('食品名')}<input id="nf-name" placeholder="食品名（例：サバ缶）" value="${val(v.name)}">
     <div class="grid2">
-      <input id="nf-unit" placeholder="1単位（例：50g）">
-      <input id="nf-kcal" type="number" inputmode="decimal" placeholder="kcal">
-      <input id="nf-p" type="number" inputmode="decimal" placeholder="P (g)">
-      <input id="nf-f" type="number" inputmode="decimal" placeholder="F (g)">
-      <input id="nf-c" type="number" inputmode="decimal" placeholder="C (g)">
+      <div>${lbl('1単位')}<input id="nf-unit" placeholder="例：50g、1個" value="${val(v.unit)}"></div>
+      <div>${lbl('kcal')}<input id="nf-kcal" type="number" inputmode="decimal" value="${val(v.kcal)}"></div>
+      <div>${lbl('P (g)')}<input id="nf-p" type="number" inputmode="decimal" value="${val(v.p)}"></div>
+      <div>${lbl('F (g)')}<input id="nf-f" type="number" inputmode="decimal" value="${val(v.f)}"></div>
+      <div>${lbl('C (g)')}<input id="nf-c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
     </div>
     <div class="err" id="nf-err"></div>
     <button class="btn-main" onclick="submitFood()">登録して追加</button>`);
+}
+
+// ---- 写真から読み取り（栄養成分表示・料理写真） ----
+function pickPhoto() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => inp.files[0] && readPhoto(inp.files[0]);
+  inp.click();
+}
+
+async function readPhoto(file) {
+  sheet(`<h2>読み取り中…</h2><div class="sub" style="padding:24px 0;text-align:center">写真から栄養成分を読み取っています。<br>10〜20秒ほどかかります</div>`);
+  try {
+    const r = await call('readLabel', await shrink(file), 'image/jpeg');
+    if (!r.name) throw new Error('食品や栄養成分表示が見つかりませんでした。表示が写るように撮り直してください');
+    openNewFood(r);
+  } catch (e) {
+    sheet(`<h2>読み取れませんでした<button onclick="openPicker(picker.mode, picker.arg)">戻る</button></h2>
+      <div class="err">${esc(e.message || e)}</div>
+      <button class="btn-main" onclick="pickPhoto()">もう一度撮る</button>
+      <button class="btn-soft" onclick="openNewFood()">手入力で登録</button>`);
+  }
+}
+
+// 送る前に縮小してJPEGにする（通信量と読み取り時間を減らす）
+function shrink(file, max = 1568) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(img.src);
+      res(cv.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = () => rej(new Error('画像を開けませんでした'));
+    img.src = URL.createObjectURL(file);
+  });
 }
 
 async function submitFood() {
