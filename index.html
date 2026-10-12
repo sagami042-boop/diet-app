@@ -12,9 +12,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012212912';</script>
-<script src="nav.js?v=20261012212912"></script>
-<script src="api.js?v=20261012212912"></script>
+<script>const APP_VERSION = '20261012213229';</script>
+<script src="nav.js?v=20261012213229"></script>
+<script src="api.js?v=20261012213229"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -182,12 +182,9 @@ function applyInit(d) {
 
 async function init() {
   const base = cacheGet('base'), day = cacheGet('day:' + today());
-  const wantFoods = new URLSearchParams(location.search).get('view') === 'foods';
-  if (base && day) { S.meals = base.meals; S.sets = base.sets; S.conf = base.conf; setFoods(base.foods); loadDay(day); if (wantFoods) openFoods(); }
+  if (base && day) { S.meals = base.meals; S.sets = base.sets; S.conf = base.conf; setFoods(base.foods); loadDay(day); }
   try {
-    const first = !S.day;
     applyInit(await call('getInit', today()));
-    if (first && wantFoods) openFoods();
     prefetch(shift(today(), -1));
   } catch (e) {
     if (!S.day) document.getElementById('app').innerHTML = `<div class="loading">読み込めませんでした。<br>${esc(e.message || e)}</div>`;
@@ -420,7 +417,7 @@ function openPicker(mode, arg) {
   if (mode === 'manage') return openFoods();
   picker = { mode, arg, q: '', edit: false };
   const cur = mode === 'replace' ? S.items[arg] : null, cf = cur && foodOf(cur);
-  sheet(`<h2>${mode === 'add' ? `${arg}に追加` : '食品の詳細・差し替え'}<span style="display:flex;gap:6px"><button id="edit-btn" onclick="toggleEdit()">整理</button><button onclick="closeSheet()">閉じる</button></span></h2>
+  sheet(`<h2>${mode === 'add' ? `${arg}に追加` : '食品の詳細・差し替え'}<span style="display:flex;gap:6px"><button onclick="goFoods()">食品リスト</button><button onclick="closeSheet()">閉じる</button></span></h2>
     ${cf ? `<div class="cur"><div>
         <b>${esc(cur.name)}</b>
         <span class="sub">${esc(cf.unit)}あたり ${fmt1(cf.kcal)}kcal ・ P${fmt1(cf.p)} F${fmt1(cf.f)} C${fmt1(cf.c)}${S.fmap[cur.name] ? '' : '（今回だけ）'}</span><br>
@@ -539,14 +536,12 @@ function openFoods() {
     </div>`);
   renderPicks();
 }
-document.addEventListener('click', e => {
-  const a = e.target.closest('a[href^="index.html?view=foods"]');
-  if (a && S.day) { e.preventDefault(); e.stopPropagation(); openFoods(); }
-}, true);
+// 食品リストの専用ページへ（まだ送っていない変更は先に保存）
+function goFoods() { flushSave(); location.href = 'foods.html' + location.hash; }
 
 function toggleEdit() {
   picker.edit = !picker.edit;
-  document.getElementById('edit-btn').textContent = picker.edit ? '完了' : '整理';
+  const b = document.getElementById('edit-btn'); if (b) b.textContent = picker.edit ? '完了' : '整理';
   renderPicks();
 }
 

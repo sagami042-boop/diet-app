@@ -1,12 +1,11 @@
 // PC（横幅900px以上）だけに出す左側のメニュー。スマホでは表示しない
 (function () {
-  const page = location.pathname.endsWith('dash.html') ? 'dash'
-    : new URLSearchParams(location.search).get('view') === 'foods' ? 'foods' : 'log';
+  const page = location.pathname.endsWith('dash.html') ? 'dash' : location.pathname.endsWith('foods.html') ? 'foods' : 'log';
   const icon = d => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const items = [
     ['log', 'index.html', '今日の記録', icon('<path d="M4 6h16M4 12h16M4 18h10"/>')],
     ['dash', 'dash.html', 'ダッシュボード', icon('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>')],
-    ['foods', 'index.html?view=foods', '食品リスト', icon('<path d="M5 4h14v16H5z"/><path d="M9 8h6M9 12h6M9 16h3"/>')],
+    ['foods', 'foods.html', '食品リスト', icon('<path d="M5 4h14v16H5z"/><path d="M9 8h6M9 12h6M9 16h3"/>')],
   ];
   const css = `
     .side-nav { display: none; }

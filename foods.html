@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>食品リスト</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ダイエット">
+<meta name="theme-color" content="#fff6f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<script>const APP_VERSION = '20261012213229';</script>
+<script src="nav.js?v=20261012213229"></script>
+<script src="api.js?v=20261012213229"></script>
+<style>
+  :root {
+    --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8;
+    --accent: #ff7a3d; --accent-soft: #ffe8da; --on-accent: #ffffff; --danger: #d64545; --ok: #14895c;
+    --p: #2a62c9; --p-bg: #e8f1ff; --f: #b97500; --f-bg: #fff0d6; --c: #14895c; --c-bg: #e0f6ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1410; --card: #261e18; --text: #f7ece4; --sub: #b59a87; --line: #3a2e25;
+      --accent: #ff8a52; --accent-soft: #4a2c1c; --on-accent: #1a1410; --danger: #ff7b7b; --ok: #5fd0a0;
+      --p: #8db4ff; --p-bg: #1f2b44; --f: #f2b851; --f-bg: #3d2e12; --c: #5fd0a0; --c-bg: #16362a;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  button:active { transform: scale(0.97); }
+  input, select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; outline: none; }
+  input:focus, select:focus { border-color: var(--accent); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 16px 18px 40px; }
+  .top { display: flex; align-items: center; gap: 12px; }
+  .top h1 { font-size: 26px; font-weight: 700; margin: 0; flex: 1; }
+  .back { font-size: 13px; background: var(--card); border-radius: 99px; padding: 6px 12px; color: var(--text); text-decoration: none; }
+  .tools { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .tools input { flex: 1 1 200px; }
+  .tools select { width: auto; flex: none; }
+  .adds { display: flex; gap: 8px; margin-top: 10px; }
+  .adds button { flex: 1; height: 42px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .adds button.main { background: var(--accent); color: var(--on-accent); }
+  .count { font-size: 12px; color: var(--sub); margin: 14px 4px 6px; }
+  .list { background: var(--card); border-radius: 18px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; width: 100%; text-align: left; padding: 12px 16px; border-top: 1px solid var(--line); }
+  .row:first-child { border-top: 0; }
+  .row.on { background: var(--accent-soft); }
+  .row .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .nm small { font-weight: 400; color: var(--sub); margin-left: 6px; }
+  .row .kc { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .row .pfc { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 12px; border-radius: 99px; padding: 2px 9px; font-variant-numeric: tabular-nums; }
+  .chip.u { background: var(--bg); color: var(--sub); }
+  .empty { padding: 30px; text-align: center; color: var(--sub); }
+  .ed { background: var(--card); border-radius: 18px; padding: 18px; }
+  .ed h2 { font-size: 18px; margin: 0 0 4px; display: flex; justify-content: space-between; align-items: center; }
+  .ed h2 button { font-size: 13px; font-weight: 400; background: var(--bg); border-radius: 99px; padding: 6px 12px; }
+  .ed label { display: block; font-size: 12px; color: var(--sub); margin: 10px 0 3px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .note { font-size: 12px; margin-top: 8px; color: var(--ok); }
+  .note.est { color: var(--accent); }
+  .err { color: var(--danger); font-size: 13px; margin-top: 8px; min-height: 1em; }
+  .btn-main { width: 100%; height: 46px; margin-top: 12px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .btn-del { width: 100%; height: 42px; margin-top: 8px; border-radius: 99px; color: var(--danger); background: var(--bg); font-weight: 600; }
+  .hint { font-size: 12px; color: var(--sub); text-align: center; margin-top: 8px; }
+  .placeholder { color: var(--sub); text-align: center; padding: 40px 10px; font-size: 14px; }
+  /* スマホ：編集欄は下から出るシート */
+  .panel { position: fixed; inset: 0; background: rgba(30,18,10,0.35); display: none; align-items: flex-end; z-index: 10; }
+  .panel.open { display: flex; }
+  .panel .ed { width: 100%; border-radius: 24px 24px 0 0; max-height: 90vh; overflow-y: auto; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+  /* PC：左に一覧、右に編集欄 */
+  @media (min-width: 900px) {
+    .wrap { padding: 24px 32px 40px; }
+    .back { display: none; }
+    .cols { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+    .row { grid-template-columns: minmax(0, 1fr) 90px 260px; padding: 12px 18px; }
+    .row .pfc { grid-column: auto; justify-content: flex-start; }
+    .row .kc { text-align: right; }
+    .row:hover { background: var(--bg); }
+    .row.on, .row.on:hover { background: var(--accent-soft); }
+    .panel { position: sticky; top: 24px; display: block; background: none; inset: auto; }
+    .panel .ed { border-radius: 18px; max-height: none; }
+    .ed .close { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="back" href="index.html">← 記録</a><h1>食品リスト</h1></div>
+  <div class="tools">
+    <input id="q" placeholder="食品名で検索" oninput="renderList()">
+    <select id="sort" onchange="renderList()">
+      <option value="uses">よく使う順</option>
+      <option value="name">名前順</option>
+      <option value="kcal">kcalが高い順</option>
+      <option value="p">タンパク質が多い順</option>
+    </select>
+  </div>
+  <div class="adds">
+    <button class="main" onclick="pickPhoto()">写真から登録</button>
+    <button onclick="openEditor()">＋ 手入力で登録</button>
+  </div>
+  <div class="cols">
+    <div>
+      <div class="count" id="count"></div>
+      <div class="list" id="list"><div class="empty">読み込み中…</div></div>
+    </div>
+    <div class="panel" id="panel" onclick="if(event.target===this)closeEditor()">
+      <div class="ed" id="editor"><div class="placeholder">一覧から食品を選ぶと、ここで編集できます</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let FOODS = [], sel = null; // sel: 編集中の食品名（新規は ''）
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const f1 = n => n < 10 ? String(Math.round(n * 10) / 10) : String(Math.round(n));
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const isPC = () => matchMedia('(min-width: 900px)').matches;
+
+// 入力画面と同じ食品データを共有する（変更したら入力画面にもすぐ反映されるよう保存）
+function setFoods(foods) {
+  FOODS = foods;
+  const base = cacheGet('base');
+  if (base) cacheSet('base', { ...base, foods });
+  renderList();
+}
+
+function renderList() {
+  const q = document.getElementById('q').value.trim();
+  const key = document.getElementById('sort').value;
+  const list = FOODS.filter(f => !q || f.name.includes(q)).slice().sort((a, b) =>
+    key === 'name' ? a.name.localeCompare(b.name, 'ja') : key === 'uses' ? b.uses - a.uses : b[key] - a[key]);
+  document.getElementById('count').textContent = `${list.length}件${q ? `（全${FOODS.length}件中）` : ''}・直近60日の使用回数つき`;
+  document.getElementById('list').innerHTML = list.map(f => `
+    <button class="row ${f.name === sel ? 'on' : ''}" data-name="${esc(f.name)}" onclick="openEditor(this.dataset.name)">
+      <span class="nm">${esc(f.name)}<small>${esc(f.unit)}</small></span>
+      <span class="kc">${Math.round(f.kcal)} kcal</span>
+      <span class="pfc">
+        <span class="chip" style="background:var(--p-bg);color:var(--p)">P ${f1(f.p)}</span>
+        <span class="chip" style="background:var(--f-bg);color:var(--f)">F ${f1(f.f)}</span>
+        <span class="chip" style="background:var(--c-bg);color:var(--c)">C ${f1(f.c)}</span>
+        <span class="chip u">${f.uses ? `最近${f.uses}回` : '最近使っていない'}</span>
+      </span>
+    </button>`).join('') || '<div class="empty">見つかりません</div>';
+}
+
+// ---- 編集欄（PCは右側、スマホは下から出るシート） ----
+function openEditor(name, prefill) {
+  const f = name != null ? FOODS.find(x => x.name === name) : null;
+  sel = f ? f.name : '';
+  const v = prefill || f || {};
+  const val = x => x == null || x === '' ? '' : esc(x);
+  document.getElementById('editor').innerHTML = `
+    <h2>${f ? '食品を編集' : '新しい食品を登録'}<button class="close" onclick="closeEditor()">閉じる</button></h2>
+    ${v.note ? `<div class="note ${v.source === 'estimate' ? 'est' : ''}">${v.source === 'estimate' ? '写真からの推定値です。' : '栄養成分表示から読み取りました。'}${esc(v.note)}</div>` : ''}
+    <label>食品名</label><input id="e-name" value="${val(v.name)}" placeholder="例：サラダチキン">
+    <div class="grid2">
+      <div><label>1単位</label><input id="e-unit" value="${val(v.unit)}" placeholder="例：50g、1個"></div>
+      <div><label>kcal</label><input id="e-kcal" type="number" inputmode="decimal" value="${val(v.kcal)}"></div>
+      <div><label>P（タンパク質 g）</label><input id="e-p" type="number" inputmode="decimal" value="${val(v.p)}"></div>
+      <div><label>F（脂質 g）</label><input id="e-f" type="number" inputmode="decimal" value="${val(v.f)}"></div>
+      <div><label>C（炭水化物 g）</label><input id="e-c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
+    </div>
+    <div class="err" id="e-err"></div>
+    <button class="btn-main" id="e-save" onclick="saveFood()">${f ? '保存' : '登録'}</button>
+    ${f ? `<button class="btn-del" onclick="removeFood()">この食品を削除</button>
+      <div class="hint">過去の記録の数値は変わりません</div>` : ''}`;
+  document.getElementById('panel').classList.add('open');
+  renderList();
+  if (!f && !prefill) document.getElementById('e-name').focus();
+}
+
+function closeEditor() {
+  sel = null;
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('editor').innerHTML = '<div class="placeholder">一覧から食品を選ぶと、ここで編集できます</div>';
+  renderList();
+}
+
+async function saveFood() {
+  const g = id => document.getElementById(id).value.trim();
+  const food = { name: g('e-name'), unit: g('e-unit') || '1個', kcal: g('e-kcal'), p: g('e-p'), f: g('e-f'), c: g('e-c') };
+  const err = document.getElementById('e-err'), btn = document.getElementById('e-save');
+  if (!food.name) { err.textContent = '食品名を入力してください'; return; }
+  if (food.kcal === '') { err.textContent = 'kcalを入力してください'; return; }
+  btn.textContent = '保存中…';
+  try {
+    if (sel) { const d = await call('updateFood', sel, food); setFoods(d.foods); }
+    else setFoods(await call('addFood', food));
+    if (isPC()) openEditor(food.name); else closeEditor();
+  } catch (e) { err.textContent = e.message || String(e); btn.textContent = sel ? '保存' : '登録'; }
+}
+
+async function removeFood() {
+  if (!confirm(`「${sel}」を食品リストから削除しますか？\n（これまでの記録はそのまま残ります）`)) return;
+  try { const d = await call('deleteFood', sel); setFoods(d.foods); closeEditor(); }
+  catch (e) { document.getElementById('e-err').textContent = e.message || String(e); }
+}
+
+// ---- 写真から登録 ----
+function pickPhoto() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => inp.files[0] && readPhoto(inp.files[0]);
+  inp.click();
+}
+async function readPhoto(file) {
+  sel = '';
+  document.getElementById('editor').innerHTML = '<div class="placeholder">写真から栄養成分を読み取っています…（10〜20秒）</div>';
+  document.getElementById('panel').classList.add('open');
+  try {
+    const r = await call('readLabel', await shrink(file), 'image/jpeg');
+    if (!r.name) throw new Error('食品や栄養成分表示が見つかりませんでした。表示が写るように撮り直してください');
+    openEditor(null, r);
+  } catch (e) {
+    document.getElementById('editor').innerHTML = `<h2>読み取れませんでした<button class="close" onclick="closeEditor()">閉じる</button></h2>
+      <div class="err">${esc(e.message || e)}</div><button class="btn-main" onclick="pickPhoto()">もう一度撮る</button>`;
+  }
+}
+function shrink(file, max = 1568) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(img.src);
+      res(cv.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = () => rej(new Error('画像を開けませんでした'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// 前回のデータですぐ表示し、裏で最新を取る
+const base = cacheGet('base');
+if (base) { FOODS = base.foods; renderList(); }
+call('getInit', ymd(new Date())).then(d => {
+  setFoods(d.foods);
+  if (window.setNavGoal) setNavGoal(`登録 <b>${d.foods.length}</b> 品`);
+}).catch(e => { if (!base) document.getElementById('list').innerHTML = `<div class="empty">読み込めませんでした。<br>${esc(e.message || e)}</div>`; });
+</script>
+</body>
+</html>
