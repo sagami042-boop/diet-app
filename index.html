@@ -12,8 +12,8 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012133605';</script>
-<script src="api.js?v=20261012133605"></script>
+<script>const APP_VERSION = '20261012133931';</script>
+<script src="api.js?v=20261012133931"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -385,7 +385,7 @@ function renderPicks() {
   document.getElementById('picks').innerHTML = picker.list.map((f, i) => picker.edit
     ? `<div class="pick">
         <span>${esc(f.name)} <span class="sub">${esc(f.unit)}${f.uses ? ` ・ 最近${f.uses}回` : ' ・ 最近使っていない'}</span></span>
-        <button class="del" onclick="deleteFood(picker.list[${i}].name)">削除</button>
+        <span style="display:flex;gap:6px;flex:none"><button class="del" style="color:var(--accent)" onclick="editFood(picker.list[${i}].name)">編集</button><button class="del" onclick="deleteFood(picker.list[${i}].name)">削除</button></span>
       </div>`
     : `<button class="pick" onclick="pick(picker.list[${i}].name)">
         <span>${esc(f.name)} <span class="sub">${esc(f.unit)}</span></span>
@@ -393,7 +393,26 @@ function renderPicks() {
       </button>`).join('') || '<div class="sub" style="padding:14px">見つかりません</div>';
 }
 
-// 食品リストの整理モード（削除ボタンを出す）
+// ---- 登録済み食品の編集 ----
+function editFood(name) {
+  const f = S.fmap[name]; if (!f) return;
+  openNewFood({ ...f, editName: name });
+}
+function backToEdit() { openPicker(picker.mode, picker.arg); toggleEdit(); }
+
+async function submitEdit() {
+  const food = readFoodForm(); if (!food) return;
+  const old = document.getElementById('nf-old').value;
+  const err = document.getElementById('nf-err');
+  try {
+    const d = await call('updateFood', old, food);
+    setFoods(d.foods); S.sets = d.sets; saveBase();
+    if (old !== food.name) S.items.forEach(it => { if (it.name === old) it.name = food.name; });
+    backToEdit(); render();
+  } catch (e) { err.textContent = e.message || String(e); }
+}
+
+// 食品リストの整理モード（編集・削除ボタンを出す）
 function toggleEdit() {
   picker.edit = !picker.edit;
   document.getElementById('edit-btn').textContent = picker.edit ? '完了' : '整理';
@@ -422,9 +441,11 @@ function openNewFood(v) {
   v = v || {};
   const val = x => x == null || x === '' ? '' : esc(x);
   const lbl = t => `<span class="sub" style="display:block;margin:8px 0 2px">${t}</span>`;
-  sheet(`<h2>${v.name != null ? '読み取り結果を確認' : '新しい食品を登録'}<button onclick="openPicker(picker.mode, picker.arg)">戻る</button></h2>
+  const editing = v.editName != null;
+  sheet(`<h2>${editing ? '食品を編集' : v.name != null ? '読み取り結果を確認' : '新しい食品を登録'}<button onclick="${editing ? 'backToEdit()' : 'openPicker(picker.mode, picker.arg)'}">戻る</button></h2>
     ${v.note ? `<div class="status ${v.source === 'estimate' ? 'copied' : 'ok'}" style="margin:0 0 8px">${v.source === 'estimate' ? '写真からの推定値です。' : '栄養成分表示から読み取りました。'}${esc(v.note)}</div>` : ''}
     ${lbl('食品名')}<input id="nf-name" placeholder="食品名（例：サバ缶）" value="${val(v.name)}">
+    <input type="hidden" id="nf-old" value="${val(v.editName)}">
     <div class="grid2">
       <div>${lbl('1単位')}<input id="nf-unit" placeholder="例：50g、1個" value="${val(v.unit)}"></div>
       <div>${lbl('kcal')}<input id="nf-kcal" type="number" inputmode="decimal" value="${val(v.kcal)}"></div>
@@ -433,9 +454,11 @@ function openNewFood(v) {
       <div>${lbl('C (g)')}<input id="nf-c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
     </div>
     <div class="err" id="nf-err"></div>
-    <button class="btn-main" onclick="addOnce()">今回だけ追加</button>
+    ${editing ? `<button class="btn-main" onclick="submitEdit()">保存</button>
+    <div class="sub" style="text-align:center;margin-top:8px">過去の記録の数値は変わりません。今日以降に使う分から新しい値になります</div>`
+    : `<button class="btn-main" onclick="addOnce()">今回だけ追加</button>
     <button class="btn-soft" onclick="submitFood()">食品リストにも登録して追加</button>
-    <div class="sub" style="text-align:center;margin-top:8px">「今回だけ」は食品リストに残りません。よく買うものだけ登録がおすすめです</div>`);
+    <div class="sub" style="text-align:center;margin-top:8px">「今回だけ」は食品リストに残りません。よく買うものだけ登録がおすすめです</div>`}`);
 }
 
 // ---- 写真から読み取り（栄養成分表示・料理写真） ----
