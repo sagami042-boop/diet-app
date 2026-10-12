@@ -68,7 +68,10 @@
   .meal-h { display: flex; justify-content: space-between; align-items: baseline; }
   .meal-h b { font-size: 17px; font-weight: 700; }
   .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
-  .meal-h + .row { margin-top: 8px; }
+  .meal-h + .row, .mpfc + .row { margin-top: 8px; }
+  .mpfc { display: flex; gap: 6px; margin-top: 6px; }
+  .mpfc span { font-size: 12px; border-radius: 99px; padding: 3px 10px; font-variant-numeric: tabular-nums; }
+  .mpfc b { font-weight: 700; font-size: 13px; }
   .name { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .name .sub { margin-left: 4px; }
   .kc { min-width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
@@ -122,6 +125,7 @@ const S = { meals: [], foods: [], fmap: {}, sets: [], conf: {}, date: '', day: n
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const r = n => Math.round(n);
+const fmt1 = n => n < 10 ? String(Math.round(n * 10) / 10) : String(Math.round(n));
 const fmtDate = s => { const d = new Date(s + 'T00:00:00'); return `${d.getMonth() + 1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`; };
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const today = () => ymd(new Date());
@@ -272,10 +276,12 @@ function render() {
 
   S.meals.forEach(meal => {
     let sum = 0, rows = '';
+    const m = { p: 0, f: 0, c: 0 };
     S.items.forEach((it, idx) => {
       if (it.meal !== meal) return;
       const f = foodOf(it);
       const kc = f ? f.kcal * it.qty : 0; sum += kc;
+      if (f) ['p', 'f', 'c'].forEach(k => m[k] += f[k] * it.qty);
       rows += `<div class="row">
         <button class="name" onclick="openPicker('replace',${idx})">${esc(it.name)}<span class="sub">${esc(f ? f.unit : '?')}</span></button>
         ${stepper(it.qty, `qty(${idx},-1)`, `qty(${idx},1)`, '個数')}
@@ -284,6 +290,8 @@ function render() {
     });
     html += `<div class="card">
       <div class="meal-h"><b>${meal}</b><span class="sub">${r(sum)} kcal</span></div>
+      ${sum ? `<div class="mpfc">${[['P', 'p'], ['F', 'f'], ['C', 'c']].map(([l, k]) =>
+        `<span style="background:var(--${k}-bg);color:var(--${k})">${l} <b>${fmt1(m[k])}</b>g</span>`).join('')}</div>` : ''}
       ${rows}
       <div class="acts">
         <button onclick="openPicker('add','${meal}')">＋ 食品</button>
