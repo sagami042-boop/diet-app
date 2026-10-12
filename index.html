@@ -12,9 +12,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012214452';</script>
-<script src="nav.js?v=20261012214452"></script>
-<script src="api.js?v=20261012214452"></script>
+<script>const APP_VERSION = '20261012215247';</script>
+<script src="nav.js?v=20261012215247"></script>
+<script src="api.js?v=20261012215247"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -84,6 +84,18 @@
   .cur > div { flex: 1; min-width: 0; }
   .cur b { display: block; font-size: 15px; }
   .layout { display: block; }
+  .ai-in { display: flex; gap: 8px; margin-bottom: 10px; }
+  .ai-in input { flex: 1; }
+  .ai-in button { flex: none; padding: 0 16px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .ai-item { background: var(--card); border-radius: 16px; padding: 12px 14px; margin-top: 8px; }
+  .ai-item .hd { display: flex; gap: 8px; align-items: center; }
+  .ai-item .hd input { flex: 1; font-weight: 600; }
+  .ai-item .x { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--bg); color: var(--sub); font-size: 16px; }
+  .ai-item .nums { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+  .ai-item .nums label { font-size: 11px; color: var(--sub); display: block; margin-bottom: 2px; }
+  .ai-item .nums input { padding: 8px 6px; text-align: right; }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 12px; }
+  .chk input { width: auto; }
   .coach { margin-top: 8px; font-size: 14px; line-height: 1.6; }
   .coach .sum { margin: 0 0 6px; font-weight: 600; }
   .coach ul { list-style: none; padding: 0; margin: 0 0 6px; }
@@ -426,6 +438,7 @@ function openPicker(mode, arg) {
         <span class="sub">×${cur.qty} ＝ <b style="display:inline;font-size:13px;color:var(--text)">${r(cf.kcal * cur.qty)}kcal</b> ・ P${fmt1(cf.p * cur.qty)} F${fmt1(cf.f * cur.qty)} C${fmt1(cf.c * cur.qty)}</span>
       </div><button class="del" style="color:var(--accent);background:var(--accent-soft)" onclick="editItem(${arg})">値を編集</button></div>
       <div class="sub" style="margin:0 2px 6px">別の食品に差し替える場合は下から選んでください</div>` : ''}
+    ${mode === 'add' ? `<div class="ai-in"><input id="ai-text" placeholder="文章で入力（例：吉野家 牛丼並と味噌汁）" onkeydown="if(event.key==='Enter'&&!event.isComposing)askMeal()"><button onclick="askMeal()">AIで追加</button></div>` : ''}
     <input id="pq" placeholder="検索" oninput="picker.q=this.value;renderPicks()">
     <div id="picks" class="list"></div>
     <div class="grid2" style="margin-top:10px">
@@ -487,6 +500,72 @@ async function askCoach() {
   } finally {
     S.coachLoading = false; card();
   }
+}
+
+// ---- 文章で食事を入力（AIが品目に分けてkcal・PFCを推定） ----
+async function askMeal() {
+  const text = document.getElementById('ai-text').value.trim();
+  if (!text) return;
+  const meal = picker.arg;
+  sheet(`<h2>推定しています…</h2><div class="sub" style="padding:24px 0;text-align:center">「${esc(text)}」<br>10秒ほどかかります</div>`);
+  try {
+    const r = await call('parseMeal', text);
+    if (!r.items.length) throw new Error('食べたものが読み取れませんでした。もう少し具体的に書いてください');
+    picker = { mode: 'add', arg: meal, q: '', ai: r.items, aiNote: r.note, aiText: text };
+    showMealResult();
+  } catch (e) {
+    sheet(`<h2>推定できませんでした<button onclick="openPicker('add','${meal}')">戻る</button></h2>
+      <div class="err">${esc(e.message || e)}</div>`);
+  }
+}
+
+function showMealResult() {
+  const items = picker.ai;
+  const num = (i, k, l, v) => `<div><label>${l}</label><input id="ai-${k}-${i}" type="number" inputmode="decimal" value="${v}"></div>`;
+  sheet(`<h2>推定結果（${picker.arg}）<button onclick="openPicker('add','${picker.arg}')">戻る</button></h2>
+    <div class="status copied" style="margin:0">${esc(picker.aiNote || '')} 数値は直せます。</div>
+    ${items.map((it, i) => {
+      const f = it.master && S.fmap[it.master];
+      return `<div class="ai-item">
+        <div class="hd"><input id="ai-name-${i}" value="${esc(f ? it.master : it.name)}" ${f ? 'readonly' : ''}><button class="x" onclick="dropAi(${i})" aria-label="外す">×</button></div>
+        ${f ? `<div class="nums" style="grid-template-columns:repeat(2,minmax(0,1fr))">${num(i, 'qty', `個数（1=${esc(f.unit)}）`, it.qty)}<div><label>登録済みの食品</label><div class="sub" style="padding-top:8px">${r(f.kcal * it.qty)}kcal</div></div></div>`
+          : `<div class="nums">${num(i, 'qty', '個数', it.qty)}${num(i, 'kcal', 'kcal', it.kcal)}${num(i, 'p', 'P', it.p)}${num(i, 'f', 'F', it.f)}${num(i, 'c', 'C', it.c)}</div>
+             <div class="sub" style="margin-top:4px">1個＝${esc(it.unit)}あたりの値</div>`}
+      </div>`;
+    }).join('')}
+    ${items.some(it => !it.master) ? `<label class="chk"><input type="checkbox" id="ai-reg">登録済みでない食品を、食品リストにも登録する</label>` : ''}
+    <div class="err" id="ai-err"></div>
+    <button class="btn-main" onclick="addAiItems()">${picker.arg}にまとめて追加</button>`);
+}
+
+function dropAi(i) { readAi(); picker.ai.splice(i, 1); if (!picker.ai.length) return openPicker('add', picker.arg); showMealResult(); }
+
+// 画面の入力値を picker.ai に読み戻す
+function readAi() {
+  picker.ai.forEach((it, i) => {
+    const g = k => { const el = document.getElementById(`ai-${k}-${i}`); return el ? el.value.trim() : null; };
+    if (!it.master) it.name = g('name') || it.name;
+    ['qty', 'kcal', 'p', 'f', 'c'].forEach(k => { const v = g(k); if (v != null && v !== '') it[k] = +v || 0; });
+  });
+}
+
+async function addAiItems() {
+  readAi();
+  const reg = document.getElementById('ai-reg')?.checked, meal = picker.arg;
+  document.querySelector('.sheet .btn-main').textContent = '追加しています…';
+  for (const it of picker.ai) {
+    if (!it.master && reg) {
+      try { setFoods(await call('addFood', { name: it.name, unit: it.unit, kcal: it.kcal, p: it.p, f: it.f, c: it.c })); it.master = it.name; }
+      catch (e) { /* 同じ名前が既にあるときなどは「今回だけ」で入れる */ }
+    }
+  }
+  if (reg) saveBase();
+  picker.ai.forEach(it => {
+    const qty = it.qty > 0 ? it.qty : 1;
+    if (it.master && S.fmap[it.master]) S.items.push({ meal, name: it.master, qty });
+    else S.items.push({ meal, name: it.name, qty, once: { unit: it.unit || '1個', kcal: it.kcal, p: it.p, f: it.f, c: it.c } });
+  });
+  closeSheet(); touch();
 }
 
 // 記録中の食品の値を編集：食品リストの食品ならリスト側を、今回だけの食品ならこの日の値を直す
