@@ -12,8 +12,8 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012132417';</script>
-<script src="api.js?v=20261012132417"></script>
+<script>const APP_VERSION = '20261012133211';</script>
+<script src="api.js?v=20261012133211"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -248,7 +248,7 @@ function render() {
         <span>${d.getMonth() + 1}月${d.getDate()}日 ${'日月火水木金土'[d.getDay()]}曜日</span>
         <button onclick="go(1)" aria-label="次の日" ${S.date >= today() ? 'style="visibility:hidden"' : ''}>›</button>
       </div>
-      <a href="dash.html">分析</a>
+      <a href="dash.html">ダッシュボード</a>
     </div>
     <h1>${isToday ? '今日' : `${d.getMonth() + 1}月${d.getDate()}日`}</h1>
     ${status}
