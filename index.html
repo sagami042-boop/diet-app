@@ -12,9 +12,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012213833';</script>
-<script src="nav.js?v=20261012213833"></script>
-<script src="api.js?v=20261012213833"></script>
+<script>const APP_VERSION = '20261012214452';</script>
+<script src="nav.js?v=20261012214452"></script>
+<script src="api.js?v=20261012214452"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -166,7 +166,7 @@ function loadDay(day) {
   S.items = day.items.map(i => ({ ...i }));
   S.weight = day.weight;
   S.act = { ...(day.act || { steps: 0, runKm: 0, runMin: 0, other: 0 }) };
-  S.dirty = false; S.failed = false;
+  S.dirty = false; S.failed = false; S.wTouched = false; S.aTouched = false;
   render();
 }
 
@@ -264,8 +264,8 @@ function softUpdate() {
   const bal = document.getElementById('bal'); if (bal) bal.innerHTML = balHtml();
   const ak = document.getElementById('act-kcal'); if (ak) { const b = burn(); ak.textContent = `${r(b.walk + b.run + b.other)} kcal`; }
 }
-function setWeight(v) { const n = parseFloat(v); S.weight = isNaN(n) ? null : Math.round(n * 10) / 10; softUpdate(); }
-function setAct(k, v) { const n = parseFloat(v); S.act[k] = isNaN(n) ? 0 : n; softUpdate(); }
+function setWeight(v) { const n = parseFloat(v); S.weight = isNaN(n) ? null : Math.round(n * 10) / 10; S.wTouched = true; softUpdate(); }
+function setAct(k, v) { const n = parseFloat(v); S.act[k] = isNaN(n) ? 0 : n; S.aTouched = true; softUpdate(); }
 
 // 消費カロリー（目安）＝ 基礎代謝×活動係数 ＋ 歩行 ＋ ランニング ＋ その他運動
 function burn() {
@@ -290,7 +290,7 @@ function balHtml() {
 function numInput(k, val, cls, ph) {
   return `<input class="${cls || ''}" type="number" inputmode="decimal" min="0" value="${val || ''}" placeholder="${ph || '0'}" oninput="setAct('${k}',this.value)">`;
 }
-function stepWeight(d) { S.weight = Math.round(((S.weight || S.conf.weight || 60) + d) * 10) / 10; touch(); }
+function stepWeight(d) { S.weight = Math.round(((S.weight || S.conf.weight || 60) + d) * 10) / 10; S.wTouched = true; touch(); }
 
 function bar(v, goal) {
   const pct = goal ? Math.min(100, v / goal * 100) : 0;
@@ -391,8 +391,10 @@ async function save() {
   clearTimeout(autoTimer);
   if (S.day.saved && !S.dirty && !S.failed) return;
   if (S.sending) { S.again = true; return; }
-  const date = S.date, items = S.items.filter(i => i.qty > 0), weight = S.weight, act = { ...S.act };
-  S.dirty = false; S.failed = false; S.day = { ...S.day, saved: true, copiedFrom: '' }; S.sending = true;
+  // 体重・活動は、この画面で触ったときだけ送る（ヘルスケアから自動で入った値を古い値で上書きしないため）
+  const date = S.date, items = S.items.filter(i => i.qty > 0);
+  const weight = S.wTouched ? S.weight : null, act = S.aTouched ? { ...S.act } : null;
+  S.dirty = false; S.failed = false; S.wTouched = false; S.aTouched = false; S.day = { ...S.day, saved: true, copiedFrom: '' }; S.sending = true;
   updateStatus();
   try {
     const d = await call('saveDay', date, items, weight, act);
