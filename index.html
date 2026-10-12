@@ -12,8 +12,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012212640';</script>
-<script src="api.js?v=20261012212640"></script>
+<script>const APP_VERSION = '20261012212912';</script>
+<script src="nav.js?v=20261012212912"></script>
+<script src="api.js?v=20261012212912"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -181,9 +182,12 @@ function applyInit(d) {
 
 async function init() {
   const base = cacheGet('base'), day = cacheGet('day:' + today());
-  if (base && day) { S.meals = base.meals; S.sets = base.sets; S.conf = base.conf; setFoods(base.foods); loadDay(day); }
+  const wantFoods = new URLSearchParams(location.search).get('view') === 'foods';
+  if (base && day) { S.meals = base.meals; S.sets = base.sets; S.conf = base.conf; setFoods(base.foods); loadDay(day); if (wantFoods) openFoods(); }
   try {
+    const first = !S.day;
     applyInit(await call('getInit', today()));
+    if (first && wantFoods) openFoods();
     prefetch(shift(today(), -1));
   } catch (e) {
     if (!S.day) document.getElementById('app').innerHTML = `<div class="loading">読み込めませんでした。<br>${esc(e.message || e)}</div>`;
@@ -314,7 +318,7 @@ function render() {
         <span>${d.getMonth() + 1}月${d.getDate()}日 ${'日月火水木金土'[d.getDay()]}曜日</span>
         <button onclick="go(1)" aria-label="次の日" ${S.date >= today() ? 'style="visibility:hidden"' : ''}>›</button>
       </div>
-      <a href="dash.html">ダッシュボード</a>
+      <a href="dash.html" class="pc-hide">ダッシュボード</a>
     </div>
     <h1>${isToday ? '今日' : `${d.getMonth() + 1}月${d.getDate()}日`}</h1>
     ${status}
@@ -369,6 +373,7 @@ function render() {
     </div>`;
   });
 
+  if (window.setNavGoal) setNavGoal(`目標 <b>${c.weight ? c.weight.toFixed(1) + 'kg' : '–'}</b>${S.weight ? `（今 ${S.weight.toFixed(1)}kg）` : ''}<br>${isToday ? '今日' : fmtDate(S.date)} ${r(t.kcal).toLocaleString()} / ${c.kcal.toLocaleString()} kcal`);
   // スマホは縦1列、PC（横幅900px以上）は左に集計・右に食事カードの2列
   document.getElementById('app').innerHTML = `<div class="layout"><div class="side">${html}</div><div class="main">${mealsHtml}</div></div>`;
   renderFoot();
@@ -412,6 +417,7 @@ function sheet(inner) {
 
 let picker = null;
 function openPicker(mode, arg) {
+  if (mode === 'manage') return openFoods();
   picker = { mode, arg, q: '', edit: false };
   const cur = mode === 'replace' ? S.items[arg] : null, cf = cur && foodOf(cur);
   sheet(`<h2>${mode === 'add' ? `${arg}に追加` : '食品の詳細・差し替え'}<span style="display:flex;gap:6px"><button id="edit-btn" onclick="toggleEdit()">整理</button><button onclick="closeSheet()">閉じる</button></span></h2>
@@ -503,9 +509,9 @@ function editFood(name) {
 }
 // 編集画面から戻る：食品の詳細から来たときは詳細へ、整理モードから来たときは整理モードへ
 function backToEdit() {
-  const fromItem = picker.fromItem;
+  const fromItem = picker.fromItem, manage = picker.mode === 'manage';
   openPicker(picker.mode, picker.arg);
-  if (!fromItem) toggleEdit();
+  if (!fromItem && !manage) toggleEdit();
 }
 
 async function submitEdit() {
@@ -521,6 +527,23 @@ async function submitEdit() {
 }
 
 // 食品リストの整理モード（編集・削除ボタンを出す）
+// 食品リストの管理（左メニューの「食品リスト」から開く）
+function openFoods() {
+  picker = { mode: 'manage', arg: null, q: '', edit: true };
+  sheet(`<h2>食品リスト<button onclick="closeSheet()">閉じる</button></h2>
+    <input id="pq" placeholder="検索" oninput="picker.q=this.value;renderPicks()">
+    <div id="picks" class="list"></div>
+    <div class="grid2" style="margin-top:10px">
+      <button class="btn-soft" style="margin:0" onclick="pickPhoto()">写真から登録</button>
+      <button class="btn-soft" style="margin:0" onclick="openNewFood()">＋ 手入力で登録</button>
+    </div>`);
+  renderPicks();
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href^="index.html?view=foods"]');
+  if (a && S.day) { e.preventDefault(); e.stopPropagation(); openFoods(); }
+}, true);
+
 function toggleEdit() {
   picker.edit = !picker.edit;
   document.getElementById('edit-btn').textContent = picker.edit ? '完了' : '整理';
@@ -540,6 +563,7 @@ async function deleteFood(name) {
 }
 
 function pick(name) {
+  if (picker.mode === 'manage') return openFoods();
   if (picker.mode === 'add') S.items.push({ meal: picker.arg, name, qty: 1 });
   else { S.items[picker.arg].name = name; delete S.items[picker.arg].once; }
   closeSheet(); touch();
@@ -562,7 +586,8 @@ function openNewFood(v) {
       <div>${lbl('C (g)')}<input id="nf-c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
     </div>
     <div class="err" id="nf-err"></div>
-    ${onceEdit ? `<button class="btn-main" onclick="submitOnceEdit(${v.onceIdx})">保存</button>
+    ${picker && picker.mode === 'manage' && !editing ? `<button class="btn-main" onclick="submitFood()">食品リストに登録</button>`
+    : onceEdit ? `<button class="btn-main" onclick="submitOnceEdit(${v.onceIdx})">保存</button>
     <div class="sub" style="text-align:center;margin-top:8px">この日の記録だけが変わります</div>`
     : editing ? `<button class="btn-main" onclick="submitEdit()">保存</button>
     <div class="sub" style="text-align:center;margin-top:8px">過去の記録の数値は変わりません。今日以降に使う分から新しい値になります</div>`
