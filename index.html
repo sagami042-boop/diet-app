@@ -12,9 +12,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012215247';</script>
-<script src="nav.js?v=20261012215247"></script>
-<script src="api.js?v=20261012215247"></script>
+<script>const APP_VERSION = '20261012215509';</script>
+<script src="nav.js?v=20261012215509"></script>
+<script src="api.js?v=20261012215509"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -438,7 +438,8 @@ function openPicker(mode, arg) {
         <span class="sub">×${cur.qty} ＝ <b style="display:inline;font-size:13px;color:var(--text)">${r(cf.kcal * cur.qty)}kcal</b> ・ P${fmt1(cf.p * cur.qty)} F${fmt1(cf.f * cur.qty)} C${fmt1(cf.c * cur.qty)}</span>
       </div><button class="del" style="color:var(--accent);background:var(--accent-soft)" onclick="editItem(${arg})">値を編集</button></div>
       <div class="sub" style="margin:0 2px 6px">別の食品に差し替える場合は下から選んでください</div>` : ''}
-    ${mode === 'add' ? `<div class="ai-in"><input id="ai-text" placeholder="文章で入力（例：吉野家 牛丼並と味噌汁）" onkeydown="if(event.key==='Enter'&&!event.isComposing)askMeal()"><button onclick="askMeal()">AIで追加</button></div>` : ''}
+    ${mode === 'add' ? `<div class="ai-in"><input id="ai-text" placeholder="文章で入力（例：吉野家 牛丼並と味噌汁）" onkeydown="if(event.key==='Enter'&&!event.isComposing)askMeal()"><button onclick="askMeal()">AIで追加</button></div>
+      <button class="btn-soft" style="margin:0 0 10px" onclick="pickMealPhotos()">料理の写真から推定（複数枚OK・居酒屋など）</button>` : ''}
     <input id="pq" placeholder="検索" oninput="picker.q=this.value;renderPicks()">
     <div id="picks" class="list"></div>
     <div class="grid2" style="margin-top:10px">
@@ -539,6 +540,48 @@ function showMealResult() {
 }
 
 function dropAi(i) { readAi(); picker.ai.splice(i, 1); if (!picker.ai.length) return openPicker('add', picker.arg); showMealResult(); }
+
+// ---- 料理の写真（複数枚）から推定：居酒屋などで撮っておいた写真を、あとからまとめて選べる ----
+function pickMealPhotos() {
+  const meal = picker.arg;
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+  inp.onchange = async () => {
+    const files = [...inp.files].slice(0, 6);
+    if (!files.length) return;
+    sheet('<h2>写真を準備しています…</h2>');
+    try {
+      const photos = [];
+      for (const f of files) photos.push(await shrink(f, 1280));
+      picker = { mode: 'add', arg: meal, q: '', photos };
+      showPhotoMemo();
+    } catch (e) { alert(e.message || e); openPicker('add', meal); }
+  };
+  inp.click();
+}
+
+function showPhotoMemo() {
+  sheet(`<h2>料理の写真（${picker.photos.length}枚）<button onclick="openPicker('add','${picker.arg}')">戻る</button></h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${picker.photos.map(b => `<img src="data:image/jpeg;base64,${b}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px">`).join('')}</div>
+    <span class="sub" style="display:block;margin:12px 0 4px">ひとことメモ（任意）</span>
+    <input id="ph-memo" placeholder="例：4人でシェア。唐揚げは3個、雑炊は1杯">
+    <div class="sub" style="margin-top:6px">人数や「◯個食べた」を書くと、自分が食べた分に近づきます。最大6枚まで。</div>
+    <button class="btn-main" onclick="estimatePhotos()">推定する</button>`);
+}
+
+async function estimatePhotos() {
+  const memo = document.getElementById('ph-memo').value.trim(), meal = picker.arg, photos = picker.photos;
+  sheet(`<h2>推定しています…</h2><div class="sub" style="padding:24px 0;text-align:center">写真${photos.length}枚から料理と量を見ています。<br>20秒ほどかかります</div>`);
+  try {
+    const r = await call('parseMealPhotos', photos, memo);
+    if (!r.items.length) throw new Error('料理が見つかりませんでした。料理が写っている写真を選んでください');
+    picker = { mode: 'add', arg: meal, q: '', ai: r.items, aiNote: r.note };
+    showMealResult();
+  } catch (e) {
+    picker = { mode: 'add', arg: meal, q: '', photos };
+    sheet(`<h2>推定できませんでした<button onclick="showPhotoMemo()">戻る</button></h2><div class="err">${esc(e.message || e)}</div>`);
+  }
+}
 
 // 画面の入力値を picker.ai に読み戻す
 function readAi() {
