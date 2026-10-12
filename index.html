@@ -12,8 +12,8 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012133931';</script>
-<script src="api.js?v=20261012133931"></script>
+<script>const APP_VERSION = '20261012211641';</script>
+<script src="api.js?v=20261012211641"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -43,6 +43,7 @@
   .status { font-size: 12px; margin-top: 4px; color: var(--sub); }
   .status.copied { color: var(--accent); }
   .status.ok { color: var(--ok); }
+  .status.err { color: var(--danger); }
   .hero { margin-top: 18px; }
   .hero .num { font-size: 46px; font-weight: 700; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
   .hero .of { color: var(--sub); font-size: 14px; margin-left: 4px; }
@@ -122,7 +123,7 @@
 <div class="toast" id="toast" style="display:none"></div>
 
 <script>
-const S = { meals: [], foods: [], fmap: {}, sets: [], conf: {}, date: '', day: null, items: [], weight: null, dirty: false, sending: false, again: false };
+const S = { meals: [], foods: [], fmap: {}, sets: [], conf: {}, date: '', day: null, items: [], weight: null, dirty: false, sending: false, again: false, failed: false };
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const r = n => Math.round(n);
@@ -141,7 +142,7 @@ function loadDay(day) {
   S.items = day.items.map(i => ({ ...i }));
   S.weight = day.weight;
   S.act = { ...(day.act || { steps: 0, runKm: 0, runMin: 0, other: 0 }) };
-  S.dirty = false;
+  S.dirty = false; S.failed = false;
   render();
 }
 
@@ -173,7 +174,7 @@ function prefetch(date) {
 }
 
 async function go(n) {
-  if (S.dirty && !confirm('保存していない変更があります。移動しますか？')) return;
+  flushSave(); // 移動する前に、まだ送っていない変更を保存
   const date = shift(S.date, n);
   if (date > today()) return;
   const hit = cacheGet('day:' + date);
@@ -195,7 +196,27 @@ function totals() {
   return t;
 }
 
-function touch() { S.dirty = true; render(); }
+function touch() { S.dirty = true; render(); scheduleSave(); }
+
+// ---- 自動保存：変更が止まって1.2秒たったら裏で保存する ----
+let autoTimer = null;
+function scheduleSave() { clearTimeout(autoTimer); autoTimer = setTimeout(save, 1200); }
+function flushSave() { clearTimeout(autoTimer); if (S.dirty) save(); }
+
+function statusInfo() {
+  const day = S.day;
+  if (S.failed) return ['err', '保存できませんでした。下のボタンからもう一度試してください'];
+  if (S.dirty || S.sending) return ['', '保存中…'];
+  if (day.copiedFrom) return ['copied', `${fmtDate(day.copiedFrom)}の記録をコピーしました。変わったところだけ直すと自動で保存されます`];
+  if (day.saved) return ['ok', '✓ 自動保存済み'];
+  return ['', '「＋ 食品」から食べたものを追加してください（自動で保存されます）'];
+}
+// 画面全体は描き直さずに状態表示だけ更新する（入力中のフォーカスを奪わないため）
+function updateStatus() {
+  const st = document.querySelector('.status');
+  if (st) { const [c, t] = statusInfo(); st.className = 'status ' + c; st.textContent = t; }
+  renderFoot();
+}
 function qty(idx, d) {
   if (S.items[idx].qty + d <= 0) return removeItem(idx);
   S.items[idx].qty += d; touch();
@@ -215,8 +236,7 @@ function removeItem(idx) {
 function hideToast() { document.getElementById('toast').style.display = 'none'; }
 // 入力中は全体を描き直さず（フォーカスが外れるため）、収支と状態表示だけ更新する
 function softUpdate() {
-  S.dirty = true; renderFoot();
-  const st = document.querySelector('.status'); if (st) { st.className = 'status'; st.textContent = '未保存の変更があります'; }
+  S.dirty = true; updateStatus(); scheduleSave();
   const bal = document.getElementById('bal'); if (bal) bal.innerHTML = balHtml();
   const ak = document.getElementById('act-kcal'); if (ak) { const b = burn(); ak.textContent = `${r(b.walk + b.run + b.other)} kcal`; }
 }
@@ -260,11 +280,8 @@ function stepper(val, minus, plus, label) {
 function render() {
   const t = totals(), c = S.conf, day = S.day, isToday = S.date === today();
   const d = new Date(S.date + 'T00:00:00');
-  let status = '';
-  if (S.dirty) status = '<div class="status">未保存の変更があります</div>';
-  else if (day.copiedFrom) status = `<div class="status copied">${fmtDate(day.copiedFrom)}の記録をコピーしました。変わったところだけ直してください</div>`;
-  else if (day.saved) status = '<div class="status ok">✓ 記録済み</div>';
-  else status = '<div class="status">「＋ 食品」から食べたものを追加してください</div>';
+  const [stCls, stText] = statusInfo();
+  const status = `<div class="status ${stCls}">${stText}</div>`;
   const left = c.kcal - t.kcal;
 
   let html = `
@@ -331,31 +348,33 @@ function render() {
   renderFoot();
 }
 
+// 下のボタンは「コピーした内容をそのまま記録する」ときと「保存に失敗したとき」だけ出す
 function renderFoot() {
   const foot = document.getElementById('foot'), b = document.getElementById('saveBtn');
-  foot.style.display = '';
-  const done = S.day.saved && !S.dirty;
-  b.className = done ? 'done' : '';
-  b.textContent = done ? (S.sending ? '✓ 保存しました' : '✓ 保存済み') : '記録する';
+  const copiedUnsaved = S.day.copiedFrom && !S.day.saved && !S.dirty && !S.sending;
+  foot.style.display = S.failed || copiedUnsaved ? '' : 'none';
+  b.className = '';
+  b.textContent = S.failed ? 'もう一度保存する' : 'この内容で記録する';
 }
 
 // 押した瞬間に「保存済み」にして、送信は裏で行う。失敗したときだけ未保存に戻して知らせる
+// 保存は裏で行う。失敗したら未保存に戻して、下に「もう一度保存する」を出す
 async function save() {
-  if (S.day.saved && !S.dirty) return;
+  clearTimeout(autoTimer);
+  if (S.day.saved && !S.dirty && !S.failed) return;
   if (S.sending) { S.again = true; return; }
   const date = S.date, items = S.items.filter(i => i.qty > 0), weight = S.weight, act = { ...S.act };
-  S.dirty = false; S.day = { ...S.day, saved: true, copiedFrom: '' }; S.sending = true;
-  render();
+  S.dirty = false; S.failed = false; S.day = { ...S.day, saved: true, copiedFrom: '' }; S.sending = true;
+  updateStatus();
   try {
     const d = await call('saveDay', date, items, weight, act);
     cacheSet('day:' + date, d);
-    if (S.date === date && !S.dirty) loadDay(d);
+    if (S.date === date && !S.dirty) S.day = d;
   } catch (e) {
-    if (S.date === date) { S.dirty = true; S.day = { ...S.day, saved: false }; render(); }
-    alert('保存できませんでした。通信状況を確認して、もう一度「記録する」を押してください。\n' + (e.message || e));
+    if (S.date === date) { S.dirty = true; S.failed = true; S.day = { ...S.day, saved: false }; }
   } finally {
-    S.sending = false; renderFoot();
-    if (S.again) { S.again = false; if (S.dirty) save(); }
+    S.sending = false; updateStatus();
+    if (S.again) { S.again = false; if (S.dirty && !S.failed) save(); }
   }
 }
 
@@ -557,6 +576,7 @@ async function saveAsSet(meal) {
 
 // 画面に戻ってきたら最新を読み直す（別の端末で保存した内容を反映するため）
 document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && S.day) return flushSave(); // アプリを閉じる前に保存
   if (document.visibilityState !== 'visible' || !S.day || S.dirty || S.sending || sheetOpen()) return;
   call('getInit', S.date).then(applyInit).catch(() => {}); // 設定や食品マスタの変更も取り込む
 });
