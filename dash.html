@@ -12,9 +12,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012213229';</script>
-<script src="nav.js?v=20261012213229"></script>
-<script src="api.js?v=20261012213229"></script>
+<script>const APP_VERSION = '20261012213833';</script>
+<script src="nav.js?v=20261012213833"></script>
+<script src="api.js?v=20261012213833"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
@@ -64,6 +64,7 @@
   @media (max-width: 600px) {
     .wrap { padding: 14px 14px 32px; }
     .top h1 { font-size: 26px; }
+    .top h1 { flex: 1; }
     .top .seg { width: 100%; }
     .top .seg button { flex: 1; }
     .kpis { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
@@ -81,8 +82,11 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <a class="back pc-hide" href="index.html">← 記録</a>
     <h1>ダッシュボード</h1>
+    <span data-burger></span>
+    <div class="seg" id="gran">
+      <button data-g="day" class="on">日毎</button><button data-g="week">週毎</button><button data-g="month">月毎</button>
+    </div>
     <div class="seg" id="seg">
       <button data-n="30" class="on">30日</button><button data-n="90">90日</button><button data-n="0">全期間</button>
     </div>
@@ -91,7 +95,7 @@
 </div>
 
 <script>
-let D = null, N = 30, charts = [];
+let D = null, N = 30, G = 'day', charts = [];
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const fmt = (n, d = 0) => n == null || isNaN(n) ? '–' : n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 const md = s => { const [, m, d] = s.split('-'); return `${+m}/${+d}`; };
@@ -108,12 +112,45 @@ call('getDashboard').then(d => {
   if (!hit) document.getElementById('body').innerHTML = `<div class="empty">読み込めませんでした。<br>${e.message || e}</div>`;
 });
 
+function setPeriod(n) {
+  N = n;
+  document.querySelectorAll('#seg button').forEach(x => x.classList.toggle('on', +x.dataset.n === n));
+}
 document.getElementById('seg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  N = +b.dataset.n;
-  document.querySelectorAll('#seg button').forEach(x => x.classList.toggle('on', x === b));
-  render();
+  setPeriod(+b.dataset.n); render();
 });
+// 集計の単位。切り替えたら見やすい期間に合わせる（日毎→30日、週毎→90日、月毎→全期間）
+document.getElementById('gran').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  G = b.dataset.g;
+  document.querySelectorAll('#gran button').forEach(x => x.classList.toggle('on', x === b));
+  setPeriod({ day: 30, week: 90, month: 0 }[G]); render();
+});
+
+// 日ごとのデータを、週（月曜はじまり）や月ごとにまとめる
+function groups(S) {
+  const keyOf = date => {
+    if (G === 'day') return date;
+    if (G === 'month') return date.slice(0, 7);
+    const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return ymd(d);
+  };
+  const map = new Map();
+  S.forEach(d => { const k = keyOf(d.date); if (!map.has(k)) map.set(k, []); map.get(k).push(d); });
+  const years = new Set([...map.keys()].map(k => k.slice(0, 4)));
+  return [...map].map(([k, days]) => {
+    const logged = days.filter(d => d.logged), ws = days.filter(d => d.weight != null), st = days.filter(d => d.act && d.act.steps);
+    const bal = logged.length ? logged.reduce((x, d) => x + d.bal, 0) : null;
+    return {
+      key: k, days, n: logged.length,
+      label: G === 'day' ? md(k) : G === 'week' ? md(k) + '〜' : (years.size > 1 ? k.slice(0, 4) + '/' : '') + (+k.slice(5)) + '月',
+      kcal: avg(logged.map(d => d.kcal)), p: avg(logged.map(d => d.p)), f: avg(logged.map(d => d.f)), c: avg(logged.map(d => d.c)),
+      burn: avg(days.map(d => d.burn.total)), bal,
+      weight: avg(ws.map(d => d.weight)), wAvg: G === 'day' ? days[0].wAvg : null,
+      steps: avg(st.map(d => d.act.steps)), runKm: days.reduce((x, d) => x + ((d.act && d.act.runKm) || 0), 0),
+    };
+  });
+}
 
 // 期間内の日付を連続で並べる（記録のない日も軸に残す）
 function series() {
@@ -175,6 +212,9 @@ function render() {
   const stepDays = S.filter(d => d.act && d.act.steps), stepAvg = avg(stepDays.map(d => d.act.steps));
   const runDays = S.filter(d => d.act && d.act.runKm).length, runKm = S.reduce((x, d) => x + ((d.act && d.act.runKm) || 0), 0);
   const burnAvg = avg(S.slice(-28).map(d => d.burn.total));
+  const B = groups(S), unit = { day: '日', week: '週', month: '月' }[G];
+  const sign = (v, txt) => v == null ? '–' : (v < 0 ? '−' : '+') + txt;
+  const fatTxt = v => v == null ? '' : Math.abs(v) >= 7200 ? fmt(Math.abs(v) / 7200, 2) + 'kg' : fmt(Math.abs(v) / 7.2) + 'g';
 
   body.innerHTML = `
     <div class="kpis">
@@ -194,17 +234,18 @@ function render() {
         <div class="kpi" style="background:var(--bg)"><div class="l">平均歩数</div><div class="v">${fmt(stepAvg)}<small> 歩</small></div><div class="d">入力した${stepDays.length}日</div></div>
         <div class="kpi" style="background:var(--bg)"><div class="l">ランニング合計</div><div class="v">${fmt(runKm, 1)}<small> km</small></div><div class="d">${runDays}回</div></div>
       </div>
-      <div class="chart" style="height:220px;margin-top:10px"><canvas id="cb"></canvas></div>
+      <div class="cap" style="margin-top:10px">${G === 'day' ? '日ごとの収支' : `${unit}ごとの収支の合計（記録した日の分）`}</div>
+      <div class="chart" style="height:220px;margin-top:4px"><canvas id="cb"></canvas></div>
     </div>
     <div class="grid">
-      <div class="card"><h2>体重</h2><div class="cap">点＝毎日の値、線＝7日平均、点線＝目標</div><div class="chart"><canvas id="cw"></canvas></div></div>
+      <div class="card"><h2>体重</h2><div class="cap">${G === 'day' ? '点＝毎日の値、線＝7日平均' : `${unit}ごとの平均`}、点線＝目標</div><div class="chart"><canvas id="cw"></canvas></div></div>
       <div class="card"><h2>PFC（期間平均）</h2><div class="cap">記録した${logged.length}日の平均と目標</div><div id="pfc"></div></div>
     </div>
-    <div class="card" style="margin-top:12px"><h2>摂取と消費</h2><div class="cap">棒＝摂取、線＝消費（目安）、点線＝目標 ${fmt(c.kcal)}kcal。記録のない日は空欄</div><div class="chart" style="height:220px"><canvas id="ck"></canvas></div>
-      <details><summary>日別の数値を表で見る</summary>
-        <table><thead><tr><th>日付</th><th>kcal</th><th>P</th><th>F</th><th>C</th><th>消費</th><th>収支</th><th>脂肪</th><th>歩数</th><th>ラン</th><th>体重</th></tr></thead><tbody>
-        ${[...S].reverse().filter(d => d.logged || d.weight != null || d.act).map(d => `<tr><td>${md(d.date)}</td><td>${d.logged ? fmt(d.kcal) : '–'}</td><td>${d.logged ? fmt(d.p) : '–'}</td><td>${d.logged ? fmt(d.f) : '–'}</td><td>${d.logged ? fmt(d.c) : '–'}</td><td>${fmt(d.burn.total)}</td><td>${d.bal == null ? '–' : (d.bal < 0 ? '−' : '+') + fmt(Math.abs(d.bal))}</td><td>${d.bal == null ? '–' : (d.bal < 0 ? '−' : '+') + fmt(Math.abs(d.bal) / 7.2) + 'g'}</td><td>${d.act && d.act.steps ? fmt(d.act.steps) : '–'}</td><td>${d.act && d.act.runKm ? fmt(d.act.runKm, 1) + 'km' : '–'}</td><td>${fmt(d.weight, 1)}</td></tr>`).join('')}
-        </tbody></table></details>
+    <div class="card" style="margin-top:12px"><h2>摂取と消費</h2><div class="cap">${G === 'day' ? '' : `${unit}ごとの1日あたり平均。`}棒＝摂取、線＝消費（目安）、点線＝目標 ${fmt(c.kcal)}kcal。記録のない${unit}は空欄</div><div class="chart" style="height:220px"><canvas id="ck"></canvas></div>
+      <details><summary>${unit}別の数値を表で見る</summary>
+        <div style="overflow-x:auto"><table><thead><tr><th>${G === 'day' ? '日付' : G === 'week' ? '週' : '月'}</th><th>kcal${G === 'day' ? '' : '/日'}</th><th>P</th><th>F</th><th>C</th><th>消費${G === 'day' ? '' : '/日'}</th><th>収支${G === 'day' ? '' : '合計'}</th><th>脂肪</th><th>歩数</th><th>ラン</th><th>体重</th>${G === 'day' ? '' : '<th>記録</th>'}</tr></thead><tbody>
+        ${[...B].reverse().filter(b => b.n || b.weight != null || b.steps || b.runKm).map(b => `<tr><td>${b.label}</td><td>${fmt(b.kcal)}</td><td>${fmt(b.p)}</td><td>${fmt(b.f)}</td><td>${fmt(b.c)}</td><td>${fmt(b.burn)}</td><td>${sign(b.bal, fmt(Math.abs(b.bal)))}</td><td>${sign(b.bal, fatTxt(b.bal))}</td><td>${fmt(b.steps)}</td><td>${b.runKm ? fmt(b.runKm, 1) + 'km' : '–'}</td><td>${fmt(b.weight, 1)}</td>${G === 'day' ? '' : `<td>${b.n}日</td>`}</tr>`).join('')}
+        </tbody></table></div></details>
     </div>`;
 
   const pfc = [['P（タンパク質）', 'p'], ['F（脂質）', 'f'], ['C（炭水化物）', 'c']];
@@ -217,15 +258,19 @@ function render() {
   Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
   Chart.defaults.color = css('--sub');
   const grid = { color: css('--line'), drawTicks: false }, border = { display: false };
-  const labels = S.map(d => md(d.date));
+  const labels = B.map(b => b.label);
   const tip = { backgroundColor: css('--card'), titleColor: css('--text'), bodyColor: css('--text'), borderColor: css('--line'), borderWidth: 1, padding: 10 };
   const x = { grid: { display: false }, border, ticks: { maxTicksLimit: 8, maxRotation: 0 } };
 
   charts.push(new Chart(document.getElementById('cw'), {
     data: { labels, datasets: [
-      { type: 'line', label: '7日平均', data: S.map(d => d.wAvg), borderColor: css('--accent'), borderWidth: 2.5, pointRadius: 0, tension: 0.3, spanGaps: true },
-      { type: 'line', label: '体重', data: S.map(d => d.weight), showLine: false, pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: css('--accent-soft'), pointBorderWidth: 0 },
-      { type: 'line', label: '目標', data: S.map(() => c.weight || null), borderColor: css('--muted'), borderWidth: 1, borderDash: [4, 4], pointRadius: 0 },
+      ...(G === 'day' ? [
+        { type: 'line', label: '7日平均', data: B.map(b => b.wAvg), borderColor: css('--accent'), borderWidth: 2.5, pointRadius: 0, tension: 0.3, spanGaps: true },
+        { type: 'line', label: '体重', data: B.map(b => b.weight), showLine: false, pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: css('--accent-soft'), pointBorderWidth: 0 },
+      ] : [
+        { type: 'line', label: unit + '平均', data: B.map(b => b.weight), borderColor: css('--accent'), backgroundColor: css('--accent'), borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6, tension: 0.3, spanGaps: true },
+      ]),
+      { type: 'line', label: '目標', data: B.map(() => c.weight || null), borderColor: css('--muted'), borderWidth: 1, borderDash: [4, 4], pointRadius: 0 },
     ] },
     options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false }, tooltip: { ...tip, callbacks: { label: i => i.raw == null ? null : `${i.dataset.label} ${fmt(i.raw, 1)}kg` } } },
@@ -234,9 +279,9 @@ function render() {
 
   charts.push(new Chart(document.getElementById('ck'), {
     data: { labels, datasets: [
-      { type: 'bar', label: '摂取', data: S.map(d => d.logged ? Math.round(d.kcal) : null), backgroundColor: css('--accent'), borderRadius: 4, maxBarThickness: 18 },
-      { type: 'line', label: '消費', data: S.map(d => Math.round(d.burn.total)), borderColor: css('--p'), borderWidth: 2, pointRadius: 0, tension: 0.2 },
-      { type: 'line', label: '目標', data: S.map(() => c.kcal), borderColor: css('--muted'), borderWidth: 1, borderDash: [4, 4], pointRadius: 0 },
+      { type: 'bar', label: '摂取', data: B.map(b => b.kcal == null ? null : Math.round(b.kcal)), backgroundColor: css('--accent'), borderRadius: 4, maxBarThickness: G === 'day' ? 18 : 36 },
+      { type: 'line', label: '消費', data: B.map(b => Math.round(b.burn)), borderColor: css('--p'), borderWidth: 2, pointRadius: G === 'day' ? 0 : 3, tension: 0.2 },
+      { type: 'line', label: '目標', data: B.map(() => c.kcal), borderColor: css('--muted'), borderWidth: 1, borderDash: [4, 4], pointRadius: 0 },
     ] },
     options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false }, tooltip: { ...tip, callbacks: { label: i => i.raw == null ? null : `${i.dataset.label} ${fmt(i.raw)}kcal` } } },
@@ -245,11 +290,11 @@ function render() {
 
   charts.push(new Chart(document.getElementById('cb'), {
     data: { labels, datasets: [
-      { type: 'bar', label: '収支', data: S.map(d => d.bal == null ? null : Math.round(d.bal)),
-        backgroundColor: S.map(d => d.bal != null && d.bal > 0 ? css('--danger') : css('--c')), borderRadius: 4, maxBarThickness: 18 },
+      { type: 'bar', label: '収支', data: B.map(b => b.bal == null ? null : Math.round(b.bal)),
+        backgroundColor: B.map(b => b.bal != null && b.bal > 0 ? css('--danger') : css('--c')), borderRadius: 4, maxBarThickness: G === 'day' ? 18 : 36 },
     ] },
     options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: { ...tip, callbacks: { label: i => i.raw == null ? null : [`収支 ${i.raw > 0 ? '+' : ''}${fmt(i.raw)}kcal`, `脂肪 約${i.raw > 0 ? '+' : '−'}${fmt(Math.abs(i.raw) / 7.2)}g`] } } },
+      plugins: { legend: { display: false }, tooltip: { ...tip, callbacks: { label: i => i.raw == null ? null : [`収支 ${i.raw > 0 ? '+' : ''}${fmt(i.raw)}kcal`, `脂肪 約${i.raw > 0 ? '+' : '−'}${fatTxt(i.raw)}`].concat(G === 'day' ? [] : [`（記録${B[i.dataIndex].n}日）`]) } } },
       scales: { x, y: { grid: { ...grid, color: ctx => ctx.tick.value === 0 ? css('--sub') : css('--line') }, border, ticks: { callback: v => fmt(v) } } } },
   }));
 }

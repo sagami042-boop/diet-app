@@ -9,6 +9,24 @@
   ];
   const css = `
     .side-nav { display: none; }
+    /* スマホ：右上のハンバーガーボタンと、右から出るメニュー */
+    .nav-burger { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px;
+      background: var(--card); color: var(--text); flex: none; }
+    .m-nav { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
+    .m-nav .ov { position: absolute; inset: 0; background: rgba(20,12,8,0.4); opacity: 0; transition: opacity .2s; }
+    .m-nav .pn { position: absolute; top: 0; right: 0; bottom: 0; width: min(280px, 80vw); background: #2b231e; color: #e9ddd3;
+      padding: calc(20px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom)); display: flex; flex-direction: column;
+      transform: translateX(100%); transition: transform .22s ease; }
+    .m-nav.open { pointer-events: auto; }
+    .m-nav.open .ov { opacity: 1; }
+    .m-nav.open .pn { transform: none; }
+    .m-nav .logo { font-size: 20px; font-weight: 700; color: #fff; padding: 0 10px; display: flex; align-items: center; gap: 10px; }
+    .m-nav .logo img { width: 28px; height: 28px; border-radius: 8px; }
+    .m-nav nav { margin-top: 22px; display: flex; flex-direction: column; gap: 4px; }
+    .m-nav a { display: flex; align-items: center; gap: 12px; padding: 13px 12px; border-radius: 10px; color: #e9ddd3; text-decoration: none; font-size: 16px; }
+    .m-nav a.on { background: rgba(255,255,255,0.11); color: #fff; font-weight: 600; }
+    .m-nav .foot { margin-top: auto; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.06); font-size: 12px; color: #a8968a; line-height: 1.6; }
+    .m-nav .foot b { color: #fff; font-size: 14px; }
     @media (min-width: 900px) {
       body { padding-left: 232px; }
       .side-nav { display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; width: 232px; padding: 22px 14px;
@@ -22,7 +40,7 @@
       .side-nav a.on { background: rgba(255,255,255,0.11); color: #fff; font-weight: 600; }
       .side-nav .foot { margin-top: auto; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.06); font-size: 12px; color: #a8968a; line-height: 1.6; }
       .side-nav .foot b { color: #fff; font-size: 14px; }
-      .pc-hide { display: none !important; }
+      .pc-hide, .nav-burger, .m-nav { display: none !important; }
     }`;
   const style = document.createElement('style');
   style.textContent = css;
@@ -32,8 +50,22 @@
   el.innerHTML = `<div class="logo"><img src="icon.png" alt="">ダイエット<small>diet</small></div>
     <nav>${items.map(([k, href, label, ic]) => `<a href="${href}" class="${k === page ? 'on' : ''}">${ic}${label}</a>`).join('')}</nav>
     <div class="foot" id="nav-goal"></div>`;
+  const links = items.map(([k, href, label, ic]) => `<a href="${href}" class="${k === page ? 'on' : ''}">${ic}${label}</a>`).join('');
+  const mob = document.createElement('div');
+  mob.className = 'm-nav';
+  mob.innerHTML = `<div class="ov" onclick="closeNav()"></div><div class="pn">
+    <div class="logo"><img src="icon.png" alt="">ダイエット</div><nav>${links}</nav><div class="foot nav-goal"></div></div>`;
+  window.openNav = () => mob.classList.add('open');
+  window.closeNav = () => mob.classList.remove('open');
+  // 各ページのヘッダーに置くボタン
+  window.NAV_BURGER = `<button class="nav-burger" onclick="openNav()" aria-label="メニューを開く"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>`;
+
   // 画面側から目標などを表示してもらう（メニューを置く前に呼ばれても、置いた時点で反映する）
   let goal = '';
-  window.setNavGoal = html => { goal = html; const g = document.getElementById('nav-goal'); if (g) g.innerHTML = html; };
-  document.addEventListener('DOMContentLoaded', () => { document.body.prepend(el); el.querySelector('#nav-goal').innerHTML = goal; });
+  const paint = () => document.querySelectorAll('#nav-goal, .nav-goal').forEach(g => { g.innerHTML = goal; });
+  window.setNavGoal = html => { goal = html; paint(); };
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.prepend(el); document.body.append(mob); paint();
+    document.querySelectorAll('[data-burger]').forEach(x => { x.outerHTML = NAV_BURGER; });
+  });
 })();
