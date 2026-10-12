@@ -43,3 +43,15 @@ async function call(fn, ...args) {
   }
   return j.data;
 }
+
+// 新しい版が公開されていたら自動で読み込み直す（GitHub Pages は最大10分キャッシュするため）
+async function checkUpdate() {
+  if (typeof APP_VERSION === 'undefined' || (typeof S !== 'undefined' && S.dirty)) return;
+  try {
+    const t = await (await fetch(location.pathname + '?nc=' + Date.now(), { cache: 'no-store' })).text();
+    const v = (t.match(/APP_VERSION = '([^']+)'/) || [])[1];
+    if (v && v !== APP_VERSION) location.replace(location.pathname + '?v=' + v + location.hash);
+  } catch (e) {}
+}
+checkUpdate();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });

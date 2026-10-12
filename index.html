@@ -12,7 +12,8 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script src="api.js"></script>
+<script>const APP_VERSION = '20261012132417';</script>
+<script src="api.js?v=20261012132417"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -354,7 +355,7 @@ function renderPicks() {
       </div>`
     : `<button class="pick" onclick="pick(picker.list[${i}].name)">
         <span>${esc(f.name)} <span class="sub">${esc(f.unit)}</span></span>
-        <span class="sub">${r(f.kcal)} kcal ・ P${f.p}</span>
+        <span class="sub">${r(f.kcal)} kcal ・ P${fmt1(f.p)} F${fmt1(f.f)} C${fmt1(f.c)}</span>
       </button>`).join('') || '<div class="sub" style="padding:14px">見つかりません</div>';
 }
 
