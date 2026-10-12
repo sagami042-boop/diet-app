@@ -12,8 +12,8 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012133211';</script>
-<script src="api.js?v=20261012133211"></script>
+<script>const APP_VERSION = '20261012133605';</script>
+<script src="api.js?v=20261012133605"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -122,7 +122,7 @@
 <div class="toast" id="toast" style="display:none"></div>
 
 <script>
-const S = { meals: [], foods: [], fmap: {}, sets: [], conf: {}, date: '', day: null, items: [], weight: null, dirty: false, busy: false };
+const S = { meals: [], foods: [], fmap: {}, sets: [], conf: {}, date: '', day: null, items: [], weight: null, dirty: false, sending: false, again: false };
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const r = n => Math.round(n);
@@ -145,22 +145,48 @@ function loadDay(day) {
   render();
 }
 
+function saveBase() { cacheSet('base', { meals: S.meals, sets: S.sets, conf: S.conf, foods: S.foods }); }
+const sheetOpen = () => !!document.getElementById('sheet').innerHTML;
+
+// サーバーから届いた最新を反映する。入力中・送信中・シート表示中は日付データを書き換えない
+function applyInit(d) {
+  S.meals = d.meals; S.sets = d.sets; S.conf = d.conf; setFoods(d.foods); saveBase();
+  cacheSet('day:' + d.day.date, d.day);
+  if (!S.day || (d.day.date === S.date && !S.dirty && !S.sending && !sheetOpen())) loadDay(d.day);
+}
+
 async function init() {
+  const base = cacheGet('base'), day = cacheGet('day:' + today());
+  if (base && day) { S.meals = base.meals; S.sets = base.sets; S.conf = base.conf; setFoods(base.foods); loadDay(day); }
   try {
-    const d = await call('getInit', today());
-    S.meals = d.meals; S.sets = d.sets; S.conf = d.conf; setFoods(d.foods);
-    loadDay(d.day);
+    applyInit(await call('getInit', today()));
+    prefetch(shift(today(), -1));
   } catch (e) {
-    document.getElementById('app').innerHTML = `<div class="loading">読み込めませんでした。<br>${esc(e.message || e)}</div>`;
+    if (!S.day) document.getElementById('app').innerHTML = `<div class="loading">読み込めませんでした。<br>${esc(e.message || e)}</div>`;
   }
+}
+
+// 前の日のデータを先に取っておく（‹ を押したときにすぐ出るように）
+function prefetch(date) {
+  if (cacheGet('day:' + date)) return;
+  call('getDay', date).then(d => cacheSet('day:' + date, d)).catch(() => {});
 }
 
 async function go(n) {
   if (S.dirty && !confirm('保存していない変更があります。移動しますか？')) return;
   const date = shift(S.date, n);
   if (date > today()) return;
-  document.getElementById('app').innerHTML = '<div class="loading">読み込み中…</div>';
-  loadDay(await call('getDay', date));
+  const hit = cacheGet('day:' + date);
+  if (hit) loadDay(hit);
+  else { S.date = date; S.day = null; document.getElementById('app').innerHTML = '<div class="loading">読み込み中…</div>'; }
+  try {
+    const d = await call('getDay', date);
+    cacheSet('day:' + date, d);
+    if (S.date === date && !S.dirty && !S.sending) loadDay(d);
+  } catch (e) {
+    if (!hit && S.date === date) document.getElementById('app').innerHTML = `<div class="loading">読み込めませんでした。<br>${esc(e.message || e)}</div>`;
+  }
+  prefetch(shift(date, -1));
 }
 
 function totals() {
@@ -310,18 +336,26 @@ function renderFoot() {
   foot.style.display = '';
   const done = S.day.saved && !S.dirty;
   b.className = done ? 'done' : '';
-  b.textContent = S.busy ? '保存中…' : done ? '✓ 保存済み' : '記録する';
+  b.textContent = done ? (S.sending ? '✓ 保存しました' : '✓ 保存済み') : '記録する';
 }
 
+// 押した瞬間に「保存済み」にして、送信は裏で行う。失敗したときだけ未保存に戻して知らせる
 async function save() {
-  if (S.busy || (S.day.saved && !S.dirty)) return;
-  S.busy = true; renderFoot();
+  if (S.day.saved && !S.dirty) return;
+  if (S.sending) { S.again = true; return; }
+  const date = S.date, items = S.items.filter(i => i.qty > 0), weight = S.weight, act = { ...S.act };
+  S.dirty = false; S.day = { ...S.day, saved: true, copiedFrom: '' }; S.sending = true;
+  render();
   try {
-    loadDay(await call('saveDay', S.date, S.items.filter(i => i.qty > 0), S.weight, S.act));
+    const d = await call('saveDay', date, items, weight, act);
+    cacheSet('day:' + date, d);
+    if (S.date === date && !S.dirty) loadDay(d);
   } catch (e) {
-    alert('保存できませんでした: ' + (e.message || e));
+    if (S.date === date) { S.dirty = true; S.day = { ...S.day, saved: false }; render(); }
+    alert('保存できませんでした。通信状況を確認して、もう一度「記録する」を押してください。\n' + (e.message || e));
   } finally {
-    S.busy = false; renderFoot();
+    S.sending = false; renderFoot();
+    if (S.again) { S.again = false; if (S.dirty) save(); }
   }
 }
 
@@ -373,7 +407,7 @@ async function deleteFood(name) {
   if (f) S.items.filter(it => it.name === name).forEach(it => { it.once = { unit: f.unit, kcal: f.kcal, p: f.p, f: f.f, c: f.c }; });
   try {
     const d = await call('deleteFood', name);
-    setFoods(d.foods); S.sets = d.sets;
+    setFoods(d.foods); S.sets = d.sets; saveBase();
     renderPicks();
   } catch (e) { alert('削除できませんでした: ' + (e.message || e)); }
 }
@@ -465,7 +499,7 @@ async function submitFood() {
   const food = readFoodForm(); if (!food) return;
   const err = document.getElementById('nf-err');
   try {
-    setFoods(await call('addFood', food));
+    setFoods(await call('addFood', food)); saveBase();
     pick(food.name);
   } catch (e) { err.textContent = e.message || String(e); }
 }
@@ -493,16 +527,15 @@ async function saveAsSet(meal) {
   if (!name) return;
   try {
     S.sets = await call('saveSet', name.trim(), S.items.filter(i => i.meal === meal && i.qty > 0 && S.fmap[i.name]).map(i => ({ name: i.name, qty: i.qty })));
+    saveBase();
     openSets(meal);
   } catch (e) { alert('保存できませんでした: ' + (e.message || e)); }
 }
 
 // 画面に戻ってきたら最新を読み直す（別の端末で保存した内容を反映するため）
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState !== 'visible' || !S.day || S.dirty || S.busy || document.getElementById('sheet').innerHTML) return;
-  const d = await call('getInit', S.date); // 設定や食品マスタの変更も取り込む
-  S.meals = d.meals; S.sets = d.sets; S.conf = d.conf; setFoods(d.foods);
-  loadDay(d.day);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !S.day || S.dirty || S.sending || sheetOpen()) return;
+  call('getInit', S.date).then(applyInit).catch(() => {}); // 設定や食品マスタの変更も取り込む
 });
 
 init();

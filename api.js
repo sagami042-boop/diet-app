@@ -27,6 +27,11 @@ document.addEventListener('click', e => {
   if (a && location.hash) a.setAttribute('href', a.getAttribute('href').split('#')[0] + location.hash);
 });
 
+// 前回の結果をこの端末に覚えておき、開いた瞬間はそれで表示する（最新は裏で取り直す）
+const CACHE = 'diet-cache:';
+function cacheGet(k) { try { return JSON.parse(localStorage.getItem(CACHE + k)); } catch (e) { return null; } }
+function cacheSet(k, v) { try { localStorage.setItem(CACHE + k, JSON.stringify(v)); } catch (e) {} }
+
 async function call(fn, ...args) {
   // プレビュー用：google.script.run の代わりの偽物があればそれを使う
   if (window.google && google.script && google.script.run) {
@@ -46,7 +51,7 @@ async function call(fn, ...args) {
 
 // 新しい版が公開されていたら自動で読み込み直す（GitHub Pages は最大10分キャッシュするため）
 async function checkUpdate() {
-  if (typeof APP_VERSION === 'undefined' || (typeof S !== 'undefined' && S.dirty)) return;
+  if (typeof APP_VERSION === 'undefined' || (typeof S !== 'undefined' && (S.dirty || S.sending))) return;
   try {
     const t = await (await fetch(location.pathname + '?nc=' + Date.now(), { cache: 'no-store' })).text();
     const v = (t.match(/APP_VERSION = '([^']+)'/) || [])[1];

@@ -12,8 +12,8 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012133211';</script>
-<script src="api.js?v=20261012133211"></script>
+<script>const APP_VERSION = '20261012133605';</script>
+<script src="api.js?v=20261012133605"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
@@ -97,11 +97,14 @@ const md = s => { const [, m, d] = s.split('-'); return `${+m}/${+d}`; };
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
 
+// 前回のデータですぐ表示し、裏で最新を取って変わっていれば描き直す
+const hit = cacheGet('dash');
+if (hit) { D = hit; render(); }
 call('getDashboard').then(d => {
-  D = d;
-  render();
+  cacheSet('dash', d);
+  if (JSON.stringify(d) !== JSON.stringify(hit)) { D = d; render(); }
 }).catch(e => {
-  document.getElementById('body').innerHTML = `<div class="empty">読み込めませんでした。<br>${e.message || e}</div>`;
+  if (!hit) document.getElementById('body').innerHTML = `<div class="empty">読み込めませんでした。<br>${e.message || e}</div>`;
 });
 
 document.getElementById('seg').addEventListener('click', e => {
