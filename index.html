@@ -12,8 +12,8 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012212053';</script>
-<script src="api.js?v=20261012212053"></script>
+<script>const APP_VERSION = '20261012212640';</script>
+<script src="api.js?v=20261012212640"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -83,6 +83,12 @@
   .cur > div { flex: 1; min-width: 0; }
   .cur b { display: block; font-size: 15px; }
   .layout { display: block; }
+  .coach { margin-top: 8px; font-size: 14px; line-height: 1.6; }
+  .coach .sum { margin: 0 0 6px; font-weight: 600; }
+  .coach ul { list-style: none; padding: 0; margin: 0 0 6px; }
+  .coach li { display: flex; gap: 6px; margin: 3px 0; }
+  .coach li span { flex: none; font-weight: 700; }
+  .coach .nx { margin: 6px 0 0; background: var(--bg); border-radius: 12px; padding: 8px 10px; }
   @media (min-width: 900px) {
     .wrap { max-width: 1240px; padding: 24px 32px 104px; }
     .layout { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 28px; align-items: start; }
@@ -328,6 +334,7 @@ function render() {
       <button class="step" style="width:34px;justify-content:center;color:var(--accent);font-size:18px" onclick="stepWeight(0.1)" aria-label="体重を増やす">＋</button>
     </div>
     <div class="card"><div class="meal-h"><b>カロリー収支</b><span class="sub">目安</span></div><div id="bal" style="margin-top:10px">${balHtml()}</div></div>
+    <div class="card" id="coach-card">${coachHtml()}</div>
     <div class="card">
       <div class="meal-h"><b>活動</b><span class="sub" id="act-kcal">${(() => { const b = burn(); return r(b.walk + b.run + b.other); })()} kcal</span></div>
       <div class="arow"><span>歩数</span>${numInput('steps', S.act.steps)}<span class="u">歩</span></div>
@@ -436,6 +443,45 @@ function renderPicks() {
         <span>${esc(f.name)} <span class="sub">${esc(f.unit)}</span></span>
         <span class="sub">${r(f.kcal)} kcal ・ P${fmt1(f.p)} F${fmt1(f.f)} C${fmt1(f.c)}</span>
       </button>`).join('') || '<div class="sub" style="padding:14px">見つかりません</div>';
+}
+
+// ---- トレーナー ----
+function coachHtml() {
+  const k = S.day && S.day.coach;
+  const head = `<div class="meal-h"><b>トレーナー</b>${k ? `<span class="sub">${esc(k.at)} のコメント</span>` : ''}</div>`;
+  if (S.coachLoading) return head + '<div class="sub" style="padding:14px 0">今日の記録を見ています…（20秒ほどかかります）</div>';
+  const err = S.coachErr ? `<div class="err">${esc(S.coachErr)}</div>` : '';
+  if (!k) return head + `<div class="sub" style="margin-top:6px">今日の食事・活動・直近2週間の流れを見て、よかった点と改善点を教えてくれます。</div>${err}
+    <button class="btn-soft" onclick="askCoach()">今日のフィードバックをもらう</button>`;
+  const li = (arr, mark, col) => arr.map(x => `<li><span style="color:var(${col})">${mark}</span>${esc(x)}</li>`).join('');
+  return head + `<div class="coach">
+      <p class="sum">${esc(k.summary)}</p>
+      ${k.good.length ? `<ul>${li(k.good, '○', '--ok')}</ul>` : ''}
+      ${k.improve.length ? `<ul>${li(k.improve, '△', '--accent')}</ul>` : ''}
+      <p class="nx"><b>次は：</b>${esc(k.next)}</p>
+    </div>${err}
+    <button class="btn-soft" onclick="askCoach()">今の記録でもう一度聞く</button>`;
+}
+
+async function askCoach() {
+  flushSave();
+  const t = totals(), b = burn();
+  const items = S.items.filter(i => i.qty > 0).map(i => {
+    const f = foodOf(i) || { kcal: 0, p: 0, f: 0, c: 0 };
+    return { meal: i.meal, name: i.name, qty: i.qty, kcal: f.kcal * i.qty, p: fmt1(f.p * i.qty), f: fmt1(f.f * i.qty), c: fmt1(f.c * i.qty) };
+  });
+  const date = S.date;
+  S.coachLoading = true; S.coachErr = '';
+  const card = () => { const el = document.getElementById('coach-card'); if (el) el.innerHTML = coachHtml(); };
+  card();
+  try {
+    const k = await call('coach', { date, items, totals: t, burn: b, weight: S.weight, act: S.act });
+    if (S.date === date) { S.day = { ...S.day, coach: k }; cacheSet('day:' + date, { ...cacheGet('day:' + date), coach: k }); }
+  } catch (e) {
+    S.coachErr = e.message || String(e);
+  } finally {
+    S.coachLoading = false; card();
+  }
 }
 
 // 記録中の食品の値を編集：食品リストの食品ならリスト側を、今回だけの食品ならこの日の値を直す
