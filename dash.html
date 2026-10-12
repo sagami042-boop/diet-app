@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>分析</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ダイエット">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fff6f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<script src="api.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --muted: #c4a896; --line: #f3e4d8;
+    --accent: #ff7a3d; --accent-soft: rgba(255,122,61,0.35); --btn: #f6e3d6;
+    --danger: #d64545; --p: #2a62c9; --p-bg: #e8f1ff; --f: #b97500; --f-bg: #fff0d6; --c: #14895c; --c-bg: #e0f6ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1410; --card: #261e18; --text: #f7ece4; --sub: #b59a87; --muted: #6e5a4c; --line: #3a2e25;
+      --accent: #ff8a52; --accent-soft: rgba(255,138,82,0.4); --btn: #3a2b20;
+      --danger: #ff7b7b; --p: #8db4ff; --p-bg: #1f2b44; --f: #f2b851; --f-bg: #3d2e12; --c: #5fd0a0; --c-bg: #16362a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .top h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin: 0; flex: 1; }
+  .seg { display: inline-flex; background: var(--btn); border-radius: 99px; padding: 3px; }
+  .seg button { font: inherit; border: 0; background: none; color: var(--sub); padding: 6px 14px; border-radius: 99px; cursor: pointer; }
+  .seg button.on { background: var(--card); color: var(--text); font-weight: 600; }
+  a.back { color: var(--text); background: var(--card); border-radius: 99px; padding: 6px 14px; text-decoration: none; font-size: 13px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+  .kpi { background: var(--card); border-radius: 20px; padding: 16px 18px; }
+  .kpi .l { font-size: 12px; color: var(--sub); }
+  .kpi .v { font-size: 30px; font-weight: 700; letter-spacing: -1px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .kpi .v small { font-size: 13px; font-weight: 400; color: var(--sub); }
+  .kpi .d { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--card); border-radius: 20px; padding: 16px 18px; }
+  .card h2 { font-size: 16px; font-weight: 700; margin: 0 0 2px; }
+  .card .cap { font-size: 12px; color: var(--sub); margin-bottom: 8px; }
+  .chart { position: relative; height: 260px; }
+  .pfc-row { margin-top: 10px; border-radius: 14px; padding: 10px 12px; }
+  .pfc-row .h { display: flex; justify-content: space-between; font-size: 13px; }
+  .pfc-row .h span:last-child { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .track { height: 4px; background: rgba(127,127,127,0.18); border-radius: 4px; margin-top: 6px; position: relative; overflow: hidden; }
+  .track > div { height: 100%; border-radius: 4px; }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; color: var(--sub); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; font-size: 13px; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--sub); font-weight: 400; }
+  @media (max-width: 600px) {
+    .wrap { padding: 14px 14px 32px; }
+    .top h1 { font-size: 26px; }
+    .top .seg { width: 100%; }
+    .top .seg button { flex: 1; }
+    .kpis { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .kpi { padding: 12px 14px; border-radius: 18px; }
+    .kpi .l { font-size: 11px; }
+    .kpi .v { font-size: 24px; }
+    .kpi .v small { font-size: 11px; }
+    .kpi .d { font-size: 11px; }
+    .chart { height: 220px; }
+    .card { padding: 14px; border-radius: 18px; }
+  }
+  .empty { text-align: center; color: var(--sub); padding: 80px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="index.html">← 記録</a>
+    <h1>分析</h1>
+    <div class="seg" id="seg">
+      <button data-n="30" class="on">30日</button><button data-n="90">90日</button><button data-n="0">全期間</button>
+    </div>
+  </div>
+  <div id="body"><div class="empty">読み込み中…</div></div>
+</div>
+
+<script>
+let D = null, N = 30, charts = [];
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = (n, d = 0) => n == null || isNaN(n) ? '–' : n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+const md = s => { const [, m, d] = s.split('-'); return `${+m}/${+d}`; };
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+
+call('getDashboard').then(d => {
+  D = d;
+  render();
+}).catch(e => {
+  document.getElementById('body').innerHTML = `<div class="empty">読み込めませんでした。<br>${e.message || e}</div>`;
+});
+
+document.getElementById('seg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  N = +b.dataset.n;
+  document.querySelectorAll('#seg button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+
+// 期間内の日付を連続で並べる（記録のない日も軸に残す）
+function series() {
+  if (!D.days.length) return [];
+  const map = {}; D.days.forEach(d => map[d.date] = d);
+  const last = new Date(), first = new Date(N ? Date.now() - (N - 1) * 864e5 : D.days[0].date + 'T00:00:00');
+  const out = [];
+  for (let d = new Date(first.getFullYear(), first.getMonth(), first.getDate()); d <= last; d.setDate(d.getDate() + 1)) {
+    const k = ymd(d); out.push(map[k] || { date: k, kcal: 0, p: 0, f: 0, c: 0, logged: false, weight: null });
+  }
+  // 体重の7日移動平均（その日を含む直近7日にある記録の平均）
+  const all = D.days.filter(d => d.weight != null);
+  out.forEach(o => {
+    const from = ymd(new Date(new Date(o.date + 'T00:00:00').getTime() - 6 * 864e5));
+    o.wAvg = avg(all.filter(w => w.date >= from && w.date <= o.date).map(w => w.weight));
+    const lw = [...all].reverse().find(w => w.date <= o.date);
+    o.burn = burn(o.wAvg || (lw && lw.weight) || D.conf.weight || 60, o.act || {});
+    o.bal = o.logged ? o.kcal - o.burn.total : null;
+  });
+  return out;
+}
+
+// 消費カロリー（目安）＝ 基礎代謝×活動係数 ＋ 歩行 ＋ ランニング ＋ その他運動（入力画面と同じ式）
+function burn(w, a) {
+  const c = D.conf;
+  const bmr = c.height && c.age && c.sex ? 10 * w + 6.25 * c.height - 5 * c.age + (c.sex.startsWith('女') ? -161 : 5) : null;
+  const base = bmr ? bmr * c.factor : w * 30;
+  const walk = (a.steps || 0) * w * 0.0004, run = (a.runKm || 0) * w, other = a.other || 0;
+  return { base, walk, run, other, total: base + walk + run + other, rough: !bmr };
+}
+
+// 推定維持カロリー：直近28日の平均摂取 − 体重の傾き×7200kcal/kg
+function maintenance() {
+  const from = ymd(new Date(Date.now() - 27 * 864e5));
+  const recent = D.days.filter(d => d.date >= from);
+  const eaten = recent.filter(d => d.logged), ws = recent.filter(d => d.weight != null);
+  if (eaten.length < 14 || ws.length < 7) return { ok: false, need: Math.max(0, 14 - eaten.length) };
+  const xs = ws.map(w => new Date(w.date + 'T00:00:00').getTime() / 864e5), ys = ws.map(w => w.weight);
+  const mx = avg(xs), my = avg(ys);
+  const slope = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / xs.reduce((s, x) => s + (x - mx) ** 2, 0);
+  return { ok: true, kcal: avg(eaten.map(d => d.kcal)) - slope * 7200, perWeek: slope * 7 };
+}
+
+function render() {
+  charts.forEach(c => c.destroy()); charts = [];
+  const body = document.getElementById('body');
+  if (!D.days.length) { body.innerHTML = '<div class="empty">まだ記録がありません。入力画面で記録すると、ここにグラフが出ます。</div>'; return; }
+  const S = series(), c = D.conf;
+  const logged = S.filter(d => d.logged);
+  const lastW = [...D.days].reverse().find(d => d.weight != null);
+  const nowAvg = [...S].reverse().find(d => d.wAvg != null);
+  const last7 = logged.filter(d => d.date >= ymd(new Date(Date.now() - 6 * 864e5)));
+  const k7 = avg(last7.map(d => d.kcal));
+  const m = maintenance();
+  const toGoal = nowAvg && c.weight ? nowAvg.wAvg - c.weight : null;
+  const balDays = S.filter(d => d.bal != null);
+  const balAvg = avg(balDays.map(d => d.bal)), balSum = balDays.length ? balDays.reduce((x, d) => x + d.bal, 0) : null;
+  const stepDays = S.filter(d => d.act && d.act.steps), stepAvg = avg(stepDays.map(d => d.act.steps));
+  const runDays = S.filter(d => d.act && d.act.runKm).length, runKm = S.reduce((x, d) => x + ((d.act && d.act.runKm) || 0), 0);
+  const burnAvg = avg(S.slice(-28).map(d => d.burn.total));
+
+  body.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="l">体重（7日平均）</div><div class="v">${fmt(nowAvg && nowAvg.wAvg, 1)}<small> kg</small></div>
+        <div class="d">最新 ${lastW ? fmt(lastW.weight, 1) + 'kg（' + md(lastW.date) + '）' : '–'}</div></div>
+      <div class="kpi"><div class="l">目標 ${fmt(c.weight, 1)}kg まで</div><div class="v">${toGoal == null ? '–' : toGoal <= 0 ? '達成' : fmt(toGoal, 1)}${toGoal > 0 ? '<small> kg</small>' : ''}</div>
+        <div class="d">${m.ok && m.perWeek < 0 && toGoal > 0 ? `今のペースで約${Math.ceil(toGoal / -m.perWeek)}週` : '&nbsp;'}</div></div>
+      <div class="kpi"><div class="l">摂取kcal（7日平均）</div><div class="v">${fmt(k7)}<small> / ${fmt(c.kcal)} kcal</small></div>
+        <div class="d">${last7.length}日分の記録から</div></div>
+      <div class="kpi"><div class="l">推定維持カロリー</div><div class="v">${m.ok ? fmt(Math.round(m.kcal / 10) * 10) + '<small> kcal</small>' : '–'}</div>
+        <div class="d">${m.ok ? `体重 ${m.perWeek >= 0 ? '+' : ''}${fmt(m.perWeek, 2)}kg/週（直近28日）` : `あと${m.need}日分の記録で算出`}${m.ok ? `<br>計算上の消費 ${fmt(Math.round(burnAvg / 10) * 10)}kcal` : ''}</div></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h2>カロリー収支</h2><div class="cap">摂取 − 消費（目安）。下に伸びる緑＝赤字（減る方向）、上に伸びる赤＝黒字（増える方向）。脂肪1kg ≒ 7,200kcalで換算${S.some(d => d.burn.rough) ? '。身長・年齢・性別が未設定のため消費は仮の値' : ''}</div>
+      <div class="kpis" style="margin-top:6px">
+        <div class="kpi" style="background:var(--bg)"><div class="l">平均収支 / 日</div><div class="v" style="color:${balAvg < 0 ? 'var(--c)' : 'var(--danger)'}">${balAvg == null ? '–' : (balAvg < 0 ? '−' : '+') + fmt(Math.abs(balAvg))}<small> kcal</small></div><div class="d">${balAvg == null ? '&nbsp;' : `脂肪 約${balAvg < 0 ? '−' : '+'}${fmt(Math.abs(balAvg) / 7.2)}g／日（${balDays.length}日）`}</div></div>
+        <div class="kpi" style="background:var(--bg)"><div class="l">期間の合計</div><div class="v">${balSum == null ? '–' : (balSum < 0 ? '−' : '+') + fmt(Math.abs(balSum))}<small> kcal</small></div><div class="d">${balSum == null ? '&nbsp;' : `脂肪 約${balSum < 0 ? '−' : '+'}${fmt(Math.abs(balSum) / 7200, 2)}kg`}</div></div>
+        <div class="kpi" style="background:var(--bg)"><div class="l">平均歩数</div><div class="v">${fmt(stepAvg)}<small> 歩</small></div><div class="d">入力した${stepDays.length}日</div></div>
+        <div class="kpi" style="background:var(--bg)"><div class="l">ランニング合計</div><div class="v">${fmt(runKm, 1)}<small> km</small></div><div class="d">${runDays}回</div></div>
+      </div>
+      <div class="chart" style="height:220px;margin-top:10px"><canvas id="cb"></canvas></div>
+    </div>
+    <div class="grid">
+      <div class="card"><h2>体重</h2><div class="cap">点＝毎日の値、線＝7日平均、点線＝目標</div><div class="chart"><canvas id="cw"></canvas></div></div>
+      <div class="card"><h2>PFC（期間平均）</h2><div class="cap">記録した${logged.length}日の平均と目標</div><div id="pfc"></div></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h2>摂取と消費</h2><div class="cap">棒＝摂取、線＝消費（目安）、点線＝目標 ${fmt(c.kcal)}kcal。記録のない日は空欄</div><div class="chart" style="height:220px"><canvas id="ck"></canvas></div>
+      <details><summary>日別の数値を表で見る</summary>
+        <table><thead><tr><th>日付</th><th>kcal</th><th>P</th><th>F</th><th>C</th><th>消費</th><th>収支</th><th>脂肪</th><th>歩数</th><th>ラン</th><th>体重</th></tr></thead><tbody>
+        ${[...S].reverse().filter(d => d.logged || d.weight != null || d.act).map(d => `<tr><td>${md(d.date)}</td><td>${d.logged ? fmt(d.kcal) : '–'}</td><td>${d.logged ? fmt(d.p) : '–'}</td><td>${d.logged ? fmt(d.f) : '–'}</td><td>${d.logged ? fmt(d.c) : '–'}</td><td>${fmt(d.burn.total)}</td><td>${d.bal == null ? '–' : (d.bal < 0 ? '−' : '+') + fmt(Math.abs(d.bal))}</td><td>${d.bal == null ? '–' : (d.bal < 0 ? '−' : '+') + fmt(Math.abs(d.bal) / 7.2) + 'g'}</td><td>${d.act && d.act.steps ? fmt(d.act.steps) : '–'}</td><td>${d.act && d.act.runKm ? fmt(d.act.runKm, 1) + 'km' : '–'}</td><td>${fmt(d.weight, 1)}</td></tr>`).join('')}
+        </tbody></table></details>
+    </div>`;
+
+  const pfc = [['P（タンパク質）', 'p'], ['F（脂質）', 'f'], ['C（炭水化物）', 'c']];
+  document.getElementById('pfc').innerHTML = pfc.map(([l, k]) => {
+    const a = avg(logged.map(d => d[k])) || 0, g = c[k];
+    return `<div class="pfc-row" style="background:var(--${k}-bg)"><div class="h"><span style="color:var(--${k})">${l}</span><span>${fmt(a)} / ${fmt(g)}g</span></div>
+      <div class="track"><div style="width:${Math.min(100, g ? a / g * 100 : 0)}%;background:var(--${k})"></div></div></div>`;
+  }).join('') + `<div class="cap" style="margin-top:14px">平均 ${fmt(avg(logged.map(d => d.kcal)))} kcal / 日</div>`;
+
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  Chart.defaults.color = css('--sub');
+  const grid = { color: css('--line'), drawTicks: false }, border = { display: false };
+  const labels = S.map(d => md(d.date));
+  const tip = { backgroundColor: css('--card'), titleColor: css('--text'), bodyColor: css('--text'), borderColor: css('--line'), borderWidth: 1, padding: 10 };
+  const x = { grid: { display: false }, border, ticks: { maxTicksLimit: 8, maxRotation: 0 } };
+
+  charts.push(new Chart(document.getElementById('cw'), {
+    data: { labels, datasets: [
+      { type: 'line', label: '7日平均', data: S.map(d => d.wAvg), borderColor: css('--accent'), borderWidth: 2.5, pointRadius: 0, tension: 0.3, spanGaps: true },
+      { type: 'line', label: '体重', data: S.map(d => d.weight), showLine: false, pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: css('--accent-soft'), pointBorderWidth: 0 },
+      { type: 'line', label: '目標', data: S.map(() => c.weight || null), borderColor: css('--muted'), borderWidth: 1, borderDash: [4, 4], pointRadius: 0 },
+    ] },
+    options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { ...tip, callbacks: { label: i => i.raw == null ? null : `${i.dataset.label} ${fmt(i.raw, 1)}kg` } } },
+      scales: { x, y: { grid, border, ticks: { callback: v => fmt(v, 1) } } } },
+  }));
+
+  charts.push(new Chart(document.getElementById('ck'), {
+    data: { labels, datasets: [
+      { type: 'bar', label: '摂取', data: S.map(d => d.logged ? Math.round(d.kcal) : null), backgroundColor: css('--accent'), borderRadius: 4, maxBarThickness: 18 },
+      { type: 'line', label: '消費', data: S.map(d => Math.round(d.burn.total)), borderColor: css('--p'), borderWidth: 2, pointRadius: 0, tension: 0.2 },
+      { type: 'line', label: '目標', data: S.map(() => c.kcal), borderColor: css('--muted'), borderWidth: 1, borderDash: [4, 4], pointRadius: 0 },
+    ] },
+    options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { ...tip, callbacks: { label: i => i.raw == null ? null : `${i.dataset.label} ${fmt(i.raw)}kcal` } } },
+      scales: { x, y: { grid, border, beginAtZero: true, ticks: { callback: v => fmt(v) } } } },
+  }));
+
+  charts.push(new Chart(document.getElementById('cb'), {
+    data: { labels, datasets: [
+      { type: 'bar', label: '収支', data: S.map(d => d.bal == null ? null : Math.round(d.bal)),
+        backgroundColor: S.map(d => d.bal != null && d.bal > 0 ? css('--danger') : css('--c')), borderRadius: 4, maxBarThickness: 18 },
+    ] },
+    options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { ...tip, callbacks: { label: i => i.raw == null ? null : [`収支 ${i.raw > 0 ? '+' : ''}${fmt(i.raw)}kcal`, `脂肪 約${i.raw > 0 ? '+' : '−'}${fmt(Math.abs(i.raw) / 7.2)}g`] } } },
+      scales: { x, y: { grid: { ...grid, color: ctx => ctx.tick.value === 0 ? css('--sub') : css('--line') }, border, ticks: { callback: v => fmt(v) } } } },
+  }));
+}
+</script>
+</body>
+</html>

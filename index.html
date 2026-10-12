@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>食事記録</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ダイエット">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fff6f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<script src="api.js"></script>
+<style>
+  :root {
+    --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
+    --accent: #ff7a3d; --accent-soft: #ffe8da; --on-accent: #ffffff; --danger: #d64545; --ok: #14895c;
+    --p: #2a62c9; --p-bg: #e8f1ff; --f: #b97500; --f-bg: #fff0d6; --c: #14895c; --c-bg: #e0f6ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1410; --card: #261e18; --text: #f7ece4; --sub: #b59a87; --line: #3a2e25; --track: #3a2b20;
+      --accent: #ff8a52; --accent-soft: #4a2c1c; --on-accent: #1a1410; --danger: #ff7b7b; --ok: #5fd0a0;
+      --p: #8db4ff; --p-bg: #1f2b44; --f: #f2b851; --f-bg: #3d2e12; --c: #5fd0a0; --c-bg: #16362a;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px 18px 104px; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  button:active { transform: scale(0.96); }
+  input { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; width: 100%; outline: none; }
+  input:focus { border-color: var(--accent); }
+  .sub { font-size: 12px; color: var(--sub); }
+  .top { display: flex; align-items: center; justify-content: space-between; }
+  .top .nav { display: flex; align-items: center; gap: 2px; color: var(--sub); font-size: 13px; }
+  .top .nav button { width: 30px; height: 30px; border-radius: 50%; font-size: 17px; color: var(--sub); }
+  .top a { font-size: 12px; color: var(--text); background: var(--card); border-radius: 99px; padding: 6px 12px; text-decoration: none; }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin: 2px 0 0; }
+  .status { font-size: 12px; margin-top: 4px; color: var(--sub); }
+  .status.copied { color: var(--accent); }
+  .status.ok { color: var(--ok); }
+  .hero { margin-top: 18px; }
+  .hero .num { font-size: 46px; font-weight: 700; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .hero .of { color: var(--sub); font-size: 14px; margin-left: 4px; }
+  .hero .left { font-size: 13px; margin-top: 6px; color: var(--sub); }
+  .hero .left b { color: var(--accent); font-weight: 600; }
+  .hero .left b.over { color: var(--danger); }
+  .bar { height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; margin-top: 12px; }
+  .bar > div { height: 100%; background: var(--accent); border-radius: 3px; transition: width .25s; }
+  .bar.over > div { background: var(--danger); }
+  .pills { display: flex; gap: 8px; margin-top: 12px; }
+  .pill { flex: 1; border-radius: 14px; padding: 8px 10px; font-size: 12px; }
+  .pill b { display: block; font-size: 15px; font-weight: 600; color: var(--text); margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .pill b span { font-weight: 400; font-size: 12px; color: var(--sub); }
+  .pill .mini { height: 3px; border-radius: 2px; background: rgba(127,127,127,0.18); margin-top: 6px; overflow: hidden; }
+  .pill .mini div { height: 100%; border-radius: 2px; background: currentColor; }
+  .card { background: var(--card); border-radius: 20px; padding: 14px 16px; margin-top: 12px; }
+  .wrow { display: flex; align-items: center; gap: 10px; }
+  .wrow .lbl { flex: 1; }
+  .wrow .lbl b { display: block; font-size: 15px; font-weight: 600; }
+  .wrow input { width: 76px; text-align: center; font-weight: 600; padding: 8px 6px; border-radius: 99px; }
+  .step { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 99px; height: 34px; flex: none; }
+  .step button { width: 34px; height: 32px; font-size: 18px; color: var(--accent); border-radius: 99px; }
+  .step span { min-width: 18px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .meal-h { display: flex; justify-content: space-between; align-items: baseline; }
+  .meal-h b { font-size: 17px; font-weight: 700; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .meal-h + .row { margin-top: 8px; }
+  .name { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name .sub { margin-left: 4px; }
+  .kc { min-width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
+  .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .acts button { flex: 1; height: 36px; font-size: 13px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .foot { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 70%, transparent); }
+  .foot button { display: block; width: 100%; max-width: 444px; margin: 0 auto; height: 52px; border-radius: 99px; font-size: 16px; font-weight: 700; background: var(--accent); color: var(--on-accent); }
+  .foot button.done { background: var(--card); color: var(--ok); }
+  .sheet-bg { position: fixed; inset: 0; background: rgba(30,18,10,0.35); display: flex; align-items: flex-end; z-index: 10; }
+  .sheet { background: var(--bg); width: 100%; max-width: 480px; margin: 0 auto; border-radius: 24px 24px 0 0; padding: 16px 18px calc(18px + env(safe-area-inset-bottom)); max-height: 85vh; overflow-y: auto; }
+  .sheet h2 { font-size: 18px; font-weight: 700; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; }
+  .sheet h2 button { font-size: 13px; font-weight: 400; background: var(--card); border-radius: 99px; padding: 6px 12px; }
+  .list { background: var(--card); border-radius: 16px; margin-top: 10px; overflow: hidden; }
+  .pick { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 14px; text-align: left; border-top: 1px solid var(--line); }
+  .pick:first-child { border-top: 0; }
+  .btn-soft { width: 100%; height: 44px; margin-top: 10px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .btn-main { width: 100%; height: 48px; margin-top: 12px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .err { color: var(--danger); font-size: 13px; margin-top: 6px; }
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom)); background: var(--text); color: var(--bg); border-radius: 99px; padding: 10px 8px 10px 16px; font-size: 13px; display: flex; align-items: center; gap: 10px; z-index: 20; white-space: nowrap; }
+  .toast button { color: var(--accent); font-weight: 700; padding: 4px 10px; }
+  .btn-danger { width: 100%; height: 44px; margin-top: 10px; border-radius: 99px; background: var(--card); color: var(--danger); font-weight: 600; }
+  .bal { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: end; gap: 6px; }
+  .bal div { text-align: center; }
+  .bal b { display: block; font-size: 20px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+  .bal .op { color: var(--sub); font-size: 16px; padding-bottom: 2px; }
+  .bal b.minus { color: var(--ok); }
+  .bal b.plus { color: var(--danger); }
+  .fat { text-align: center; margin-top: 10px; font-size: 14px; font-weight: 600; border-radius: 99px; padding: 6px 12px; }
+  .fat.minus { color: var(--ok); background: var(--c-bg); }
+  .fat.plus { color: var(--danger); background: var(--accent-soft); }
+  .bal-note { font-size: 11px; color: var(--sub); text-align: center; margin-top: 8px; }
+  .arow { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .meal-h + .arow { margin-top: 8px; }
+  .arow > span:first-child { flex: 1; }
+  .arow input { width: 84px; text-align: right; padding: 7px 10px; border-radius: 99px; font-variant-numeric: tabular-nums; }
+  .arow input.s { width: 64px; }
+  .arow .u { font-size: 12px; color: var(--sub); min-width: 26px; }
+  .loading { text-align: center; color: var(--sub); padding: 80px 0; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="loading">読み込み中…</div></div>
+<div class="foot" id="foot" style="display:none"><button id="saveBtn" onclick="save()">記録する</button></div>
+<div id="sheet"></div>
+<div class="toast" id="toast" style="display:none"></div>
+
+<script>
+const S = { meals: [], foods: [], fmap: {}, sets: [], conf: {}, date: '', day: null, items: [], weight: null, dirty: false, busy: false };
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const r = n => Math.round(n);
+const fmtDate = s => { const d = new Date(s + 'T00:00:00'); return `${d.getMonth() + 1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）`; };
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const today = () => ymd(new Date());
+const shift = (s, n) => { const d = new Date(s + 'T00:00:00'); d.setDate(d.getDate() + n); return ymd(d); };
+
+function setFoods(foods) { S.foods = foods; S.fmap = {}; foods.forEach(f => S.fmap[f.name] = f); }
+
+function loadDay(day) {
+  S.day = day; S.date = day.date;
+  S.items = day.items.map(i => ({ ...i }));
+  S.weight = day.weight;
+  S.act = { ...(day.act || { steps: 0, runKm: 0, runMin: 0, other: 0 }) };
+  S.dirty = false;
+  render();
+}
+
+async function init() {
+  try {
+    const d = await call('getInit', today());
+    S.meals = d.meals; S.sets = d.sets; S.conf = d.conf; setFoods(d.foods);
+    loadDay(d.day);
+  } catch (e) {
+    document.getElementById('app').innerHTML = `<div class="loading">読み込めませんでした。<br>${esc(e.message || e)}</div>`;
+  }
+}
+
+async function go(n) {
+  if (S.dirty && !confirm('保存していない変更があります。移動しますか？')) return;
+  const date = shift(S.date, n);
+  if (date > today()) return;
+  document.getElementById('app').innerHTML = '<div class="loading">読み込み中…</div>';
+  loadDay(await call('getDay', date));
+}
+
+function totals() {
+  const t = { kcal: 0, p: 0, f: 0, c: 0 };
+  S.items.forEach(i => { const f = S.fmap[i.name]; if (!f) return; ['kcal', 'p', 'f', 'c'].forEach(k => t[k] += f[k] * i.qty); });
+  return t;
+}
+
+function touch() { S.dirty = true; render(); }
+function qty(idx, d) {
+  if (S.items[idx].qty + d <= 0) return removeItem(idx);
+  S.items[idx].qty += d; touch();
+}
+
+// 削除（直後なら「元に戻す」できる）
+let toastTimer = null;
+function removeItem(idx) {
+  const [it] = S.items.splice(idx, 1);
+  touch();
+  const el = document.getElementById('toast');
+  el.innerHTML = `<span>${esc(it.name)}を削除しました</span><button>元に戻す</button>`;
+  el.style.display = '';
+  el.querySelector('button').onclick = () => { S.items.splice(idx, 0, it); hideToast(); touch(); };
+  clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 4000);
+}
+function hideToast() { document.getElementById('toast').style.display = 'none'; }
+// 入力中は全体を描き直さず（フォーカスが外れるため）、収支と状態表示だけ更新する
+function softUpdate() {
+  S.dirty = true; renderFoot();
+  const st = document.querySelector('.status'); if (st) { st.className = 'status'; st.textContent = '未保存の変更があります'; }
+  const bal = document.getElementById('bal'); if (bal) bal.innerHTML = balHtml();
+  const ak = document.getElementById('act-kcal'); if (ak) { const b = burn(); ak.textContent = `${r(b.walk + b.run + b.other)} kcal`; }
+}
+function setWeight(v) { const n = parseFloat(v); S.weight = isNaN(n) ? null : Math.round(n * 10) / 10; softUpdate(); }
+function setAct(k, v) { const n = parseFloat(v); S.act[k] = isNaN(n) ? 0 : n; softUpdate(); }
+
+// 消費カロリー（目安）＝ 基礎代謝×活動係数 ＋ 歩行 ＋ ランニング ＋ その他運動
+function burn() {
+  const c = S.conf, a = S.act, w = S.weight || c.weight || 60;
+  const bmr = c.height && c.age && c.sex ? 10 * w + 6.25 * c.height - 5 * c.age + (c.sex.startsWith('女') ? -161 : 5) : null;
+  const base = bmr ? bmr * c.factor : w * 30; // 身長・年齢・性別が未設定なら体重×30で仮置き
+  const walk = (a.steps || 0) * w * 0.0004, run = (a.runKm || 0) * w, other = a.other || 0;
+  return { bmr, base, walk, run, other, total: base + walk + run + other, rough: !bmr };
+}
+
+function balHtml() {
+  const t = totals(), b = burn(), d = t.kcal - b.total;
+  return `<div class="bal">
+      <div><span class="sub">摂取</span><b>${r(t.kcal).toLocaleString()}</b></div><span class="op">−</span>
+      <div><span class="sub">消費</span><b>${r(b.total).toLocaleString()}</b></div><span class="op">=</span>
+      <div><span class="sub">収支</span><b class="${d < 0 ? 'minus' : 'plus'}">${d < 0 ? '−' : '+'}${r(Math.abs(d)).toLocaleString()}</b></div>
+    </div>
+    <div class="fat ${d < 0 ? 'minus' : 'plus'}">脂肪にすると 約${d < 0 ? '−' : '+'}${r(Math.abs(d) / 7.2)}g</div>
+    <div class="bal-note">消費＝${b.rough ? `基礎 ${r(b.base).toLocaleString()}` : `基礎代謝 ${r(b.bmr).toLocaleString()}×${S.conf.factor}`} ＋ 歩行 ${r(b.walk)} ＋ ラン ${r(b.run)} ＋ 他 ${r(b.other)} kcal ／ 脂肪1kg ≒ 7,200kcal${b.rough ? '<br>※身長・年齢・性別が未設定のため仮の値です' : ''}</div>`;
+}
+
+function numInput(k, val, cls, ph) {
+  return `<input class="${cls || ''}" type="number" inputmode="decimal" min="0" value="${val || ''}" placeholder="${ph || '0'}" oninput="setAct('${k}',this.value)">`;
+}
+function stepWeight(d) { S.weight = Math.round(((S.weight || S.conf.weight || 60) + d) * 10) / 10; touch(); }
+
+function bar(v, goal) {
+  const pct = goal ? Math.min(100, v / goal * 100) : 0;
+  return `<div class="bar ${goal && v > goal ? 'over' : ''}"><div style="width:${pct}%"></div></div>`;
+}
+
+function stepper(val, minus, plus, label) {
+  return `<span class="step"><button onclick="${minus}" aria-label="${label}を減らす">−</button><span>${val}</span><button onclick="${plus}" aria-label="${label}を増やす">＋</button></span>`;
+}
+
+function render() {
+  const t = totals(), c = S.conf, day = S.day, isToday = S.date === today();
+  const d = new Date(S.date + 'T00:00:00');
+  let status = '';
+  if (S.dirty) status = '<div class="status">未保存の変更があります</div>';
+  else if (day.copiedFrom) status = `<div class="status copied">${fmtDate(day.copiedFrom)}の記録をコピーしました。変わったところだけ直してください</div>`;
+  else if (day.saved) status = '<div class="status ok">✓ 記録済み</div>';
+  else status = '<div class="status">「＋ 食品」から食べたものを追加してください</div>';
+  const left = c.kcal - t.kcal;
+
+  let html = `
+    <div class="top">
+      <div class="nav">
+        <button onclick="go(-1)" aria-label="前の日">‹</button>
+        <span>${d.getMonth() + 1}月${d.getDate()}日 ${'日月火水木金土'[d.getDay()]}曜日</span>
+        <button onclick="go(1)" aria-label="次の日" ${S.date >= today() ? 'style="visibility:hidden"' : ''}>›</button>
+      </div>
+      <a href="dash.html">分析</a>
+    </div>
+    <h1>${isToday ? '今日' : `${d.getMonth() + 1}月${d.getDate()}日`}</h1>
+    ${status}
+    <div class="hero">
+      <span class="num">${r(t.kcal).toLocaleString()}</span><span class="of">/ ${c.kcal.toLocaleString()} kcal</span>
+      <div class="left">${left >= 0 ? `あと <b>${r(left).toLocaleString()} kcal</b>` : `<b class="over">${r(-left).toLocaleString()} kcal オーバー</b>`}</div>
+      ${bar(t.kcal, c.kcal)}
+    </div>
+    <div class="pills">
+      ${[['P', 'p'], ['F', 'f'], ['C', 'c']].map(([l, k]) => `<div class="pill" style="background:var(--${k}-bg);color:var(--${k})">${l}
+        <b>${r(t[k])}<span> / ${c[k]}g</span></b><div class="mini"><div style="width:${c[k] ? Math.min(100, t[k] / c[k] * 100) : 0}%"></div></div></div>`).join('')}
+    </div>
+    <div class="card wrow">
+      <div class="lbl"><span class="sub">体重${c.weight ? ` ・ 目標 ${c.weight.toFixed(1)}kg` : ''}</span></div>
+      <button class="step" style="width:34px;justify-content:center;color:var(--accent);font-size:18px" onclick="stepWeight(-0.1)" aria-label="体重を減らす">−</button>
+      <input type="number" inputmode="decimal" step="0.1" value="${S.weight != null ? S.weight.toFixed(1) : ''}" placeholder="--.-" onchange="setWeight(this.value)" oninput="setWeight(this.value)">
+      <button class="step" style="width:34px;justify-content:center;color:var(--accent);font-size:18px" onclick="stepWeight(0.1)" aria-label="体重を増やす">＋</button>
+    </div>
+    <div class="card"><div class="meal-h"><b>カロリー収支</b><span class="sub">目安</span></div><div id="bal" style="margin-top:10px">${balHtml()}</div></div>
+    <div class="card">
+      <div class="meal-h"><b>活動</b><span class="sub" id="act-kcal">${(() => { const b = burn(); return r(b.walk + b.run + b.other); })()} kcal</span></div>
+      <div class="arow"><span>歩数</span>${numInput('steps', S.act.steps)}<span class="u">歩</span></div>
+      <div class="arow"><span>ランニング</span>${numInput('runKm', S.act.runKm, 's')}<span class="u">km</span>${numInput('runMin', S.act.runMin, 's')}<span class="u">分</span></div>
+      <div class="arow"><span>その他の運動</span>${numInput('other', S.act.other)}<span class="u">kcal</span></div>
+    </div>`;
+
+  S.meals.forEach(meal => {
+    let sum = 0, rows = '';
+    S.items.forEach((it, idx) => {
+      if (it.meal !== meal) return;
+      const f = S.fmap[it.name];
+      const kc = f ? f.kcal * it.qty : 0; sum += kc;
+      rows += `<div class="row">
+        <button class="name" onclick="openPicker('replace',${idx})">${esc(it.name)}<span class="sub">${esc(f ? f.unit : '?')}</span></button>
+        ${stepper(it.qty, `qty(${idx},-1)`, `qty(${idx},1)`, '個数')}
+        <span class="sub kc">${r(kc)} kcal</span>
+      </div>`;
+    });
+    html += `<div class="card">
+      <div class="meal-h"><b>${meal}</b><span class="sub">${r(sum)} kcal</span></div>
+      ${rows}
+      <div class="acts">
+        <button onclick="openPicker('add','${meal}')">＋ 食品</button>
+        <button onclick="openSets('${meal}')">セット</button>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('app').innerHTML = html;
+  renderFoot();
+}
+
+function renderFoot() {
+  const foot = document.getElementById('foot'), b = document.getElementById('saveBtn');
+  foot.style.display = '';
+  const done = S.day.saved && !S.dirty;
+  b.className = done ? 'done' : '';
+  b.textContent = S.busy ? '保存中…' : done ? '✓ 保存済み' : '記録する';
+}
+
+async function save() {
+  if (S.busy || (S.day.saved && !S.dirty)) return;
+  S.busy = true; renderFoot();
+  try {
+    loadDay(await call('saveDay', S.date, S.items.filter(i => i.qty > 0), S.weight, S.act));
+  } catch (e) {
+    alert('保存できませんでした: ' + (e.message || e));
+  } finally {
+    S.busy = false; renderFoot();
+  }
+}
+
+// ---- 食品選択シート ----
+function closeSheet() { document.getElementById('sheet').innerHTML = ''; }
+function sheet(inner) {
+  document.getElementById('sheet').innerHTML = `<div class="sheet-bg" onclick="if(event.target===this)closeSheet()"><div class="sheet">${inner}</div></div>`;
+}
+
+let picker = null;
+function openPicker(mode, arg) {
+  picker = { mode, arg, q: '' };
+  sheet(`<h2>${mode === 'add' ? `${arg}に追加` : '食品を差し替え'}<button onclick="closeSheet()">閉じる</button></h2>
+    <input id="pq" placeholder="検索" oninput="picker.q=this.value;renderPicks()">
+    <div id="picks" class="list"></div>
+    <button class="btn-soft" onclick="openNewFood()">＋ 新しい食品を登録</button>
+    ${mode === 'replace' ? `<button class="btn-danger" onclick="closeSheet();removeItem(${arg})">この食品を削除</button>` : ''}`);
+  renderPicks();
+}
+
+function renderPicks() {
+  const q = picker.q.trim();
+  picker.list = S.foods.filter(f => !q || f.name.includes(q));
+  document.getElementById('picks').innerHTML = picker.list.map((f, i) =>
+    `<button class="pick" onclick="pick(picker.list[${i}].name)">
+      <span>${esc(f.name)} <span class="sub">${esc(f.unit)}</span></span>
+      <span class="sub">${r(f.kcal)} kcal ・ P${f.p}</span>
+    </button>`).join('') || '<div class="sub" style="padding:14px">見つかりません</div>';
+}
+
+function pick(name) {
+  if (picker.mode === 'add') S.items.push({ meal: picker.arg, name, qty: 1 });
+  else S.items[picker.arg].name = name;
+  closeSheet(); touch();
+}
+
+function openNewFood() {
+  sheet(`<h2>新しい食品を登録<button onclick="openPicker(picker.mode, picker.arg)">戻る</button></h2>
+    <input id="nf-name" placeholder="食品名（例：サバ缶）">
+    <div class="grid2">
+      <input id="nf-unit" placeholder="1単位（例：50g）">
+      <input id="nf-kcal" type="number" inputmode="decimal" placeholder="kcal">
+      <input id="nf-p" type="number" inputmode="decimal" placeholder="P (g)">
+      <input id="nf-f" type="number" inputmode="decimal" placeholder="F (g)">
+      <input id="nf-c" type="number" inputmode="decimal" placeholder="C (g)">
+    </div>
+    <div class="err" id="nf-err"></div>
+    <button class="btn-main" onclick="submitFood()">登録して追加</button>`);
+}
+
+async function submitFood() {
+  const v = id => document.getElementById(id).value.trim();
+  const food = { name: v('nf-name'), unit: v('nf-unit') || '1個', kcal: v('nf-kcal'), p: v('nf-p'), f: v('nf-f'), c: v('nf-c') };
+  const err = document.getElementById('nf-err');
+  if (!food.name) { err.textContent = '食品名を入力してください'; return; }
+  if (food.kcal === '') { err.textContent = 'kcalを入力してください'; return; }
+  try {
+    setFoods(await call('addFood', food));
+    pick(food.name);
+  } catch (e) { err.textContent = e.message || String(e); }
+}
+
+// ---- セット ----
+function openSets(meal) {
+  const mealItems = S.items.filter(i => i.meal === meal && i.qty > 0);
+  sheet(`<h2>セット（${meal}）<button onclick="closeSheet()">閉じる</button></h2>
+    <div class="list">${S.sets.map((s, i) => `<button class="pick" onclick="applySet(${i},'${meal}')">
+      <span>${esc(s.name)}</span><span class="sub">${esc(s.items.map(x => x.name + '×' + x.qty).join('・'))}</span></button>`).join('')
+      || '<div class="sub" style="padding:14px">まだセットがありません</div>'}</div>
+    ${mealItems.length ? `<button class="btn-soft" onclick="saveAsSet('${meal}')">今の${meal}の内容をセットとして保存</button>` : ''}`);
+}
+
+function applySet(i, meal) {
+  S.sets[i].items.forEach(x => {
+    const ex = S.items.find(it => it.meal === meal && it.name === x.name);
+    if (ex) ex.qty += x.qty; else S.items.push({ meal, name: x.name, qty: x.qty });
+  });
+  closeSheet(); touch();
+}
+
+async function saveAsSet(meal) {
+  const name = prompt('セット名', `いつもの${meal}`);
+  if (!name) return;
+  try {
+    S.sets = await call('saveSet', name.trim(), S.items.filter(i => i.meal === meal && i.qty > 0).map(i => ({ name: i.name, qty: i.qty })));
+    openSets(meal);
+  } catch (e) { alert('保存できませんでした: ' + (e.message || e)); }
+}
+
+// 画面に戻ってきたら最新を読み直す（別の端末で保存した内容を反映するため）
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !S.day || S.dirty || S.busy || document.getElementById('sheet').innerHTML) return;
+  const d = await call('getInit', S.date); // 設定や食品マスタの変更も取り込む
+  S.meals = d.meals; S.sets = d.sets; S.conf = d.conf; setFoods(d.foods);
+  loadDay(d.day);
+});
+
+init();
+</script>
+</body>
+</html>
