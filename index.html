@@ -12,8 +12,8 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261012211641';</script>
-<script src="api.js?v=20261012211641"></script>
+<script>const APP_VERSION = '20261012212053';</script>
+<script src="api.js?v=20261012212053"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -74,8 +74,24 @@
   .mpfc { display: flex; gap: 6px; margin-top: 6px; }
   .mpfc span { font-size: 12px; border-radius: 99px; padding: 3px 10px; font-variant-numeric: tabular-nums; }
   .mpfc b { font-weight: 700; font-size: 13px; }
-  .name { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name { flex: 1; min-width: 0; text-align: left; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+  .name .nm { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .name .sub { margin-left: 4px; }
+  .ipfc { font-size: 11px; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .ipfc i { font-style: normal; font-weight: 600; margin-right: 1px; }
+  .cur { background: var(--card); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  .cur > div { flex: 1; min-width: 0; }
+  .cur b { display: block; font-size: 15px; }
+  .layout { display: block; }
+  @media (min-width: 900px) {
+    .wrap { max-width: 1240px; padding: 24px 32px 104px; }
+    .layout { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 28px; align-items: start; }
+    .main { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; align-items: start; }
+    .main .card { margin-top: 0; }
+    .sheet-bg { align-items: center; }
+    .sheet { border-radius: 24px; max-width: 520px; }
+    .toast { bottom: 32px; }
+  }
   .kc { min-width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
   .acts { display: flex; gap: 8px; margin-top: 10px; }
   .acts button { flex: 1; height: 36px; font-size: 13px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
@@ -95,6 +111,7 @@
   .err { color: var(--danger); font-size: 13px; margin-top: 6px; }
   .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom)); background: var(--text); color: var(--bg); border-radius: 99px; padding: 10px 8px 10px 16px; font-size: 13px; display: flex; align-items: center; gap: 10px; z-index: 20; white-space: nowrap; }
   .toast button { color: var(--accent); font-weight: 700; padding: 4px 10px; }
+  .pick .del, .cur .del { white-space: nowrap; }
   .pick .del { color: var(--danger); font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 99px; background: var(--bg); flex: none; }
   .btn-danger { width: 100%; height: 44px; margin-top: 10px; border-radius: 99px; background: var(--card); color: var(--danger); font-weight: 600; }
   .bal { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: end; gap: 6px; }
@@ -318,6 +335,7 @@ function render() {
       <div class="arow"><span>その他の運動</span>${numInput('other', S.act.other)}<span class="u">kcal</span></div>
     </div>`;
 
+  let mealsHtml = '';
   S.meals.forEach(meal => {
     let sum = 0, rows = '';
     const m = { p: 0, f: 0, c: 0 };
@@ -327,12 +345,12 @@ function render() {
       const kc = f ? f.kcal * it.qty : 0; sum += kc;
       if (f) ['p', 'f', 'c'].forEach(k => m[k] += f[k] * it.qty);
       rows += `<div class="row">
-        <button class="name" onclick="openPicker('replace',${idx})">${esc(it.name)}<span class="sub">${esc(f ? f.unit : '?')}</span></button>
+        <button class="name" onclick="openPicker('replace',${idx})"><span class="nm">${esc(it.name)}<span class="sub">${esc(f ? f.unit : '?')}</span></span>${f ? `<span class="ipfc"><i style="color:var(--p)">P</i>${fmt1(f.p * it.qty)} <i style="color:var(--f)">F</i>${fmt1(f.f * it.qty)} <i style="color:var(--c)">C</i>${fmt1(f.c * it.qty)}</span>` : ''}</button>
         ${stepper(it.qty, `qty(${idx},-1)`, `qty(${idx},1)`, '個数')}
         <span class="sub kc">${r(kc)} kcal</span>
       </div>`;
     });
-    html += `<div class="card">
+    mealsHtml += `<div class="card">
       <div class="meal-h"><b>${meal}</b><span class="sub">${r(sum)} kcal</span></div>
       ${sum ? `<div class="mpfc">${[['P', 'p'], ['F', 'f'], ['C', 'c']].map(([l, k]) =>
         `<span style="background:var(--${k}-bg);color:var(--${k})">${l} <b>${fmt1(m[k])}</b>g</span>`).join('')}</div>` : ''}
@@ -344,7 +362,8 @@ function render() {
     </div>`;
   });
 
-  document.getElementById('app').innerHTML = html;
+  // スマホは縦1列、PC（横幅900px以上）は左に集計・右に食事カードの2列
+  document.getElementById('app').innerHTML = `<div class="layout"><div class="side">${html}</div><div class="main">${mealsHtml}</div></div>`;
   renderFoot();
 }
 
@@ -387,7 +406,14 @@ function sheet(inner) {
 let picker = null;
 function openPicker(mode, arg) {
   picker = { mode, arg, q: '', edit: false };
-  sheet(`<h2>${mode === 'add' ? `${arg}に追加` : '食品を差し替え'}<span style="display:flex;gap:6px"><button id="edit-btn" onclick="toggleEdit()">整理</button><button onclick="closeSheet()">閉じる</button></span></h2>
+  const cur = mode === 'replace' ? S.items[arg] : null, cf = cur && foodOf(cur);
+  sheet(`<h2>${mode === 'add' ? `${arg}に追加` : '食品の詳細・差し替え'}<span style="display:flex;gap:6px"><button id="edit-btn" onclick="toggleEdit()">整理</button><button onclick="closeSheet()">閉じる</button></span></h2>
+    ${cf ? `<div class="cur"><div>
+        <b>${esc(cur.name)}</b>
+        <span class="sub">${esc(cf.unit)}あたり ${fmt1(cf.kcal)}kcal ・ P${fmt1(cf.p)} F${fmt1(cf.f)} C${fmt1(cf.c)}${S.fmap[cur.name] ? '' : '（今回だけ）'}</span><br>
+        <span class="sub">×${cur.qty} ＝ <b style="display:inline;font-size:13px;color:var(--text)">${r(cf.kcal * cur.qty)}kcal</b> ・ P${fmt1(cf.p * cur.qty)} F${fmt1(cf.f * cur.qty)} C${fmt1(cf.c * cur.qty)}</span>
+      </div><button class="del" style="color:var(--accent);background:var(--accent-soft)" onclick="editItem(${arg})">値を編集</button></div>
+      <div class="sub" style="margin:0 2px 6px">別の食品に差し替える場合は下から選んでください</div>` : ''}
     <input id="pq" placeholder="検索" oninput="picker.q=this.value;renderPicks()">
     <div id="picks" class="list"></div>
     <div class="grid2" style="margin-top:10px">
@@ -412,12 +438,29 @@ function renderPicks() {
       </button>`).join('') || '<div class="sub" style="padding:14px">見つかりません</div>';
 }
 
+// 記録中の食品の値を編集：食品リストの食品ならリスト側を、今回だけの食品ならこの日の値を直す
+function editItem(idx) {
+  const it = S.items[idx];
+  if (S.fmap[it.name]) { picker.fromItem = true; return editFood(it.name); }
+  openNewFood({ ...it.once, name: it.name, onceIdx: idx });
+}
+function submitOnceEdit(idx) {
+  const food = readFoodForm(); if (!food) return;
+  Object.assign(S.items[idx], { name: food.name, once: { unit: food.unit, kcal: +food.kcal || 0, p: +food.p || 0, f: +food.f || 0, c: +food.c || 0 } });
+  closeSheet(); touch();
+}
+
 // ---- 登録済み食品の編集 ----
 function editFood(name) {
   const f = S.fmap[name]; if (!f) return;
   openNewFood({ ...f, editName: name });
 }
-function backToEdit() { openPicker(picker.mode, picker.arg); toggleEdit(); }
+// 編集画面から戻る：食品の詳細から来たときは詳細へ、整理モードから来たときは整理モードへ
+function backToEdit() {
+  const fromItem = picker.fromItem;
+  openPicker(picker.mode, picker.arg);
+  if (!fromItem) toggleEdit();
+}
 
 async function submitEdit() {
   const food = readFoodForm(); if (!food) return;
@@ -460,8 +503,8 @@ function openNewFood(v) {
   v = v || {};
   const val = x => x == null || x === '' ? '' : esc(x);
   const lbl = t => `<span class="sub" style="display:block;margin:8px 0 2px">${t}</span>`;
-  const editing = v.editName != null;
-  sheet(`<h2>${editing ? '食品を編集' : v.name != null ? '読み取り結果を確認' : '新しい食品を登録'}<button onclick="${editing ? 'backToEdit()' : 'openPicker(picker.mode, picker.arg)'}">戻る</button></h2>
+  const editing = v.editName != null, onceEdit = v.onceIdx != null;
+  sheet(`<h2>${editing || onceEdit ? '食品を編集' : v.name != null ? '読み取り結果を確認' : '新しい食品を登録'}<button onclick="${editing ? 'backToEdit()' : 'openPicker(picker.mode, picker.arg)'}">戻る</button></h2>
     ${v.note ? `<div class="status ${v.source === 'estimate' ? 'copied' : 'ok'}" style="margin:0 0 8px">${v.source === 'estimate' ? '写真からの推定値です。' : '栄養成分表示から読み取りました。'}${esc(v.note)}</div>` : ''}
     ${lbl('食品名')}<input id="nf-name" placeholder="食品名（例：サバ缶）" value="${val(v.name)}">
     <input type="hidden" id="nf-old" value="${val(v.editName)}">
@@ -473,7 +516,9 @@ function openNewFood(v) {
       <div>${lbl('C (g)')}<input id="nf-c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
     </div>
     <div class="err" id="nf-err"></div>
-    ${editing ? `<button class="btn-main" onclick="submitEdit()">保存</button>
+    ${onceEdit ? `<button class="btn-main" onclick="submitOnceEdit(${v.onceIdx})">保存</button>
+    <div class="sub" style="text-align:center;margin-top:8px">この日の記録だけが変わります</div>`
+    : editing ? `<button class="btn-main" onclick="submitEdit()">保存</button>
     <div class="sub" style="text-align:center;margin-top:8px">過去の記録の数値は変わりません。今日以降に使う分から新しい値になります</div>`
     : `<button class="btn-main" onclick="addOnce()">今回だけ追加</button>
     <button class="btn-soft" onclick="submitFood()">食品リストにも登録して追加</button>
