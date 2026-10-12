@@ -127,6 +127,8 @@ const today = () => ymd(new Date());
 const shift = (s, n) => { const d = new Date(s + 'T00:00:00'); d.setDate(d.getDate() + n); return ymd(d); };
 
 function setFoods(foods) { S.foods = foods; S.fmap = {}; foods.forEach(f => S.fmap[f.name] = f); }
+// 食品マスタの値、なければ「今回だけ」の値（it.once）
+const foodOf = it => S.fmap[it.name] || it.once;
 
 function loadDay(day) {
   S.day = day; S.date = day.date;
@@ -157,7 +159,7 @@ async function go(n) {
 
 function totals() {
   const t = { kcal: 0, p: 0, f: 0, c: 0 };
-  S.items.forEach(i => { const f = S.fmap[i.name]; if (!f) return; ['kcal', 'p', 'f', 'c'].forEach(k => t[k] += f[k] * i.qty); });
+  S.items.forEach(i => { const f = foodOf(i); if (!f) return; ['kcal', 'p', 'f', 'c'].forEach(k => t[k] += f[k] * i.qty); });
   return t;
 }
 
@@ -271,7 +273,7 @@ function render() {
     let sum = 0, rows = '';
     S.items.forEach((it, idx) => {
       if (it.meal !== meal) return;
-      const f = S.fmap[it.name];
+      const f = foodOf(it);
       const kc = f ? f.kcal * it.qty : 0; sum += kc;
       rows += `<div class="row">
         <button class="name" onclick="openPicker('replace',${idx})">${esc(it.name)}<span class="sub">${esc(f ? f.unit : '?')}</span></button>
@@ -345,7 +347,7 @@ function renderPicks() {
 
 function pick(name) {
   if (picker.mode === 'add') S.items.push({ meal: picker.arg, name, qty: 1 });
-  else S.items[picker.arg].name = name;
+  else { S.items[picker.arg].name = name; delete S.items[picker.arg].once; }
   closeSheet(); touch();
 }
 
@@ -364,7 +366,9 @@ function openNewFood(v) {
       <div>${lbl('C (g)')}<input id="nf-c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
     </div>
     <div class="err" id="nf-err"></div>
-    <button class="btn-main" onclick="submitFood()">登録して追加</button>`);
+    <button class="btn-main" onclick="addOnce()">今回だけ追加</button>
+    <button class="btn-soft" onclick="submitFood()">食品リストにも登録して追加</button>
+    <div class="sub" style="text-align:center;margin-top:8px">「今回だけ」は食品リストに残りません。よく買うものだけ登録がおすすめです</div>`);
 }
 
 // ---- 写真から読み取り（栄養成分表示・料理写真） ----
@@ -406,12 +410,27 @@ function shrink(file, max = 1568) {
   });
 }
 
-async function submitFood() {
+function readFoodForm() {
   const v = id => document.getElementById(id).value.trim();
   const food = { name: v('nf-name'), unit: v('nf-unit') || '1個', kcal: v('nf-kcal'), p: v('nf-p'), f: v('nf-f'), c: v('nf-c') };
   const err = document.getElementById('nf-err');
-  if (!food.name) { err.textContent = '食品名を入力してください'; return; }
-  if (food.kcal === '') { err.textContent = 'kcalを入力してください'; return; }
+  if (!food.name) { err.textContent = '食品名を入力してください'; return null; }
+  if (food.kcal === '') { err.textContent = 'kcalを入力してください'; return null; }
+  return food;
+}
+
+// 食品リストに登録せず、この日の記録にだけ追加する
+function addOnce() {
+  const food = readFoodForm(); if (!food) return;
+  const once = { unit: food.unit, kcal: +food.kcal || 0, p: +food.p || 0, f: +food.f || 0, c: +food.c || 0 };
+  if (picker.mode === 'add') S.items.push({ meal: picker.arg, name: food.name, qty: 1, once });
+  else Object.assign(S.items[picker.arg], { name: food.name, once });
+  closeSheet(); touch();
+}
+
+async function submitFood() {
+  const food = readFoodForm(); if (!food) return;
+  const err = document.getElementById('nf-err');
   try {
     setFoods(await call('addFood', food));
     pick(food.name);
@@ -440,7 +459,7 @@ async function saveAsSet(meal) {
   const name = prompt('セット名', `いつもの${meal}`);
   if (!name) return;
   try {
-    S.sets = await call('saveSet', name.trim(), S.items.filter(i => i.meal === meal && i.qty > 0).map(i => ({ name: i.name, qty: i.qty })));
+    S.sets = await call('saveSet', name.trim(), S.items.filter(i => i.meal === meal && i.qty > 0 && S.fmap[i.name]).map(i => ({ name: i.name, qty: i.qty })));
     openSets(meal);
   } catch (e) { alert('保存できませんでした: ' + (e.message || e)); }
 }
