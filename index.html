@@ -90,6 +90,7 @@
   .err { color: var(--danger); font-size: 13px; margin-top: 6px; }
   .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom)); background: var(--text); color: var(--bg); border-radius: 99px; padding: 10px 8px 10px 16px; font-size: 13px; display: flex; align-items: center; gap: 10px; z-index: 20; white-space: nowrap; }
   .toast button { color: var(--accent); font-weight: 700; padding: 4px 10px; }
+  .pick .del { color: var(--danger); font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 99px; background: var(--bg); flex: none; }
   .btn-danger { width: 100%; height: 44px; margin-top: 10px; border-radius: 99px; background: var(--card); color: var(--danger); font-weight: 600; }
   .bal { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: end; gap: 6px; }
   .bal div { text-align: center; }
@@ -323,8 +324,8 @@ function sheet(inner) {
 
 let picker = null;
 function openPicker(mode, arg) {
-  picker = { mode, arg, q: '' };
-  sheet(`<h2>${mode === 'add' ? `${arg}に追加` : '食品を差し替え'}<button onclick="closeSheet()">閉じる</button></h2>
+  picker = { mode, arg, q: '', edit: false };
+  sheet(`<h2>${mode === 'add' ? `${arg}に追加` : '食品を差し替え'}<span style="display:flex;gap:6px"><button id="edit-btn" onclick="toggleEdit()">整理</button><button onclick="closeSheet()">閉じる</button></span></h2>
     <input id="pq" placeholder="検索" oninput="picker.q=this.value;renderPicks()">
     <div id="picks" class="list"></div>
     <div class="grid2" style="margin-top:10px">
@@ -338,11 +339,34 @@ function openPicker(mode, arg) {
 function renderPicks() {
   const q = picker.q.trim();
   picker.list = S.foods.filter(f => !q || f.name.includes(q));
-  document.getElementById('picks').innerHTML = picker.list.map((f, i) =>
-    `<button class="pick" onclick="pick(picker.list[${i}].name)">
-      <span>${esc(f.name)} <span class="sub">${esc(f.unit)}</span></span>
-      <span class="sub">${r(f.kcal)} kcal ・ P${f.p}</span>
-    </button>`).join('') || '<div class="sub" style="padding:14px">見つかりません</div>';
+  document.getElementById('picks').innerHTML = picker.list.map((f, i) => picker.edit
+    ? `<div class="pick">
+        <span>${esc(f.name)} <span class="sub">${esc(f.unit)}${f.uses ? ` ・ 最近${f.uses}回` : ' ・ 最近使っていない'}</span></span>
+        <button class="del" onclick="deleteFood(picker.list[${i}].name)">削除</button>
+      </div>`
+    : `<button class="pick" onclick="pick(picker.list[${i}].name)">
+        <span>${esc(f.name)} <span class="sub">${esc(f.unit)}</span></span>
+        <span class="sub">${r(f.kcal)} kcal ・ P${f.p}</span>
+      </button>`).join('') || '<div class="sub" style="padding:14px">見つかりません</div>';
+}
+
+// 食品リストの整理モード（削除ボタンを出す）
+function toggleEdit() {
+  picker.edit = !picker.edit;
+  document.getElementById('edit-btn').textContent = picker.edit ? '完了' : '整理';
+  renderPicks();
+}
+
+async function deleteFood(name) {
+  if (!confirm(`「${name}」を食品リストから削除しますか？\n（これまでの記録はそのまま残ります）`)) return;
+  // 画面上でこの食品を使っている行は、今の値を引き継いで「今回だけ」扱いにする
+  const f = S.fmap[name];
+  if (f) S.items.filter(it => it.name === name).forEach(it => { it.once = { unit: f.unit, kcal: f.kcal, p: f.p, f: f.f, c: f.c }; });
+  try {
+    const d = await call('deleteFood', name);
+    setFoods(d.foods); S.sets = d.sets;
+    renderPicks();
+  } catch (e) { alert('削除できませんでした: ' + (e.message || e)); }
 }
 
 function pick(name) {
