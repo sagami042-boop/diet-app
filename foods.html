@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261016174006';</script>
-<script src="nav.js?v=20261016174006"></script>
-<script src="api.js?v=20261016174006"></script>
+<script>const APP_VERSION = '20261016223947';</script>
+<script src="nav.js?v=20261016223947"></script>
+<script src="api.js?v=20261016223947"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8;
@@ -160,10 +160,10 @@ function openEditor(name, prefill) {
     <label>食品名</label><input id="e-name" value="${val(v.name)}" placeholder="例：サラダチキン">
     <div class="grid2">
       <div><label>1単位</label><input id="e-unit" value="${val(v.unit)}" placeholder="例：50g、1個"></div>
-      <div><label>kcal</label><input id="e-kcal" type="number" inputmode="decimal" value="${val(v.kcal)}"></div>
-      <div><label>P（タンパク質 g）</label><input id="e-p" type="number" inputmode="decimal" value="${val(v.p)}"></div>
-      <div><label>F（脂質 g）</label><input id="e-f" type="number" inputmode="decimal" value="${val(v.f)}"></div>
-      <div><label>C（炭水化物 g）</label><input id="e-c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
+      <div><label>kcal（PFCから自動計算）</label><input id="e-kcal" data-pfc="e:kcal" type="number" inputmode="decimal" value="${val(v.kcal)}"></div>
+      <div><label>P（タンパク質 g）</label><input id="e-p" data-pfc="e:p" type="number" inputmode="decimal" value="${val(v.p)}"></div>
+      <div><label>F（脂質 g）</label><input id="e-f" data-pfc="e:f" type="number" inputmode="decimal" value="${val(v.f)}"></div>
+      <div><label>C（炭水化物 g）</label><input id="e-c" data-pfc="e:c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
     </div>
     <div class="err" id="e-err"></div>
     <button class="btn-main" id="e-save" onclick="saveFood()">${f ? '保存' : '登録'}</button>

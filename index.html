@@ -12,9 +12,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261016174006';</script>
-<script src="nav.js?v=20261016174006"></script>
-<script src="api.js?v=20261016174006"></script>
+<script>const APP_VERSION = '20261016223947';</script>
+<script src="nav.js?v=20261016223947"></script>
+<script src="api.js?v=20261016223947"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -522,7 +522,7 @@ async function askMeal() {
 
 function showMealResult() {
   const items = picker.ai;
-  const num = (i, k, l, v) => `<div><label>${l}</label><input id="ai-${k}-${i}" type="number" inputmode="decimal" value="${v}"></div>`;
+  const num = (i, k, l, v) => `<div><label>${l}</label><input id="ai-${k}-${i}" ${['kcal', 'p', 'f', 'c'].includes(k) ? `data-pfc="ai${i}:${k}"` : ''} type="number" inputmode="decimal" value="${v}"></div>`;
   sheet(`<h2>推定結果（${picker.arg}）<button onclick="openPicker('add','${picker.arg}')">戻る</button></h2>
     <div class="status copied" style="margin:0">${esc(picker.aiNote || '')} 数値は直せます。</div>
     ${items.map((it, i) => {
@@ -699,10 +699,10 @@ function openNewFood(v) {
     <input type="hidden" id="nf-old" value="${val(v.editName)}">
     <div class="grid2">
       <div>${lbl('1単位')}<input id="nf-unit" placeholder="例：50g、1個" value="${val(v.unit)}"></div>
-      <div>${lbl('kcal')}<input id="nf-kcal" type="number" inputmode="decimal" value="${val(v.kcal)}"></div>
-      <div>${lbl('P (g)')}<input id="nf-p" type="number" inputmode="decimal" value="${val(v.p)}"></div>
-      <div>${lbl('F (g)')}<input id="nf-f" type="number" inputmode="decimal" value="${val(v.f)}"></div>
-      <div>${lbl('C (g)')}<input id="nf-c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
+      <div>${lbl('kcal <small style="font-weight:400">PFCから自動計算</small>')}<input id="nf-kcal" data-pfc="nf:kcal" type="number" inputmode="decimal" value="${val(v.kcal)}"></div>
+      <div>${lbl('P (g)')}<input id="nf-p" data-pfc="nf:p" type="number" inputmode="decimal" value="${val(v.p)}"></div>
+      <div>${lbl('F (g)')}<input id="nf-f" data-pfc="nf:f" type="number" inputmode="decimal" value="${val(v.f)}"></div>
+      <div>${lbl('C (g)')}<input id="nf-c" data-pfc="nf:c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
     </div>
     <div class="err" id="nf-err"></div>
     ${picker && picker.mode === 'manage' && !editing ? `<button class="btn-main" onclick="submitFood()">食品リストに登録</button>`

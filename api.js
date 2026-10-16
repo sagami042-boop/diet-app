@@ -73,3 +73,17 @@ async function checkUpdate() {
 }
 checkUpdate();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
+
+// P・F・C を入れたら kcal を自動計算（P×4 ＋ F×9 ＋ C×4）。kcal を自分で書き換えたら、その値を優先して上書きしない
+// 入力欄に data-pfc="グループ名:kcal|p|f|c" を付けておけば、どの画面でも働く
+document.addEventListener('input', e => {
+  const el = e.target, g = el.dataset && el.dataset.pfc;
+  if (!g) return;
+  const [grp, k] = g.split(':'), q = x => document.querySelector(`[data-pfc="${grp}:${x}"]`);
+  if (k === 'kcal') { el.dataset.manual = el.value.trim() ? '1' : ''; return; }
+  const kc = q('kcal');
+  if (!kc || kc.dataset.manual) return;
+  const v = x => parseFloat(q(x) && q(x).value) || 0;
+  if (!v('p') && !v('f') && !v('c')) return;
+  kc.value = Math.round(v('p') * 4 + v('f') * 9 + v('c') * 4);
+});
