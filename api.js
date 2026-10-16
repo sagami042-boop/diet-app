@@ -32,6 +32,7 @@ const CACHE = 'diet-cache:';
 function cacheGet(k) { try { return JSON.parse(localStorage.getItem(CACHE + k)); } catch (e) { return null; } }
 function cacheSet(k, v) { try { localStorage.setItem(CACHE + k, JSON.stringify(v)); } catch (e) {} }
 
+let inflight = 0; // 通信中の数（通信中は新しい版への切り替えをしない）
 async function call(fn, ...args) {
   // プレビュー用：google.script.run の代わりの偽物があればそれを使う
   if (window.google && google.script && google.script.run) {
@@ -40,15 +41,19 @@ async function call(fn, ...args) {
   const key = apiKey();
   if (!key) throw new Error('合言葉が入力されていません。ページを開き直して入力してください。');
   // text/plain で送ると CORS の事前確認が不要になる。通信が一瞬切れた場合に備えて、読み込みは2回まで再試行
-  const body = JSON.stringify({ key, fn, args }), reads = /^(get|getInit|getDay|getDashboard|getRunning)$/.test(fn);
+  // データを書き換えない処理（読み込み・写真や文章の読み取り）は、通信が切れたら2回までやり直す
+  const body = JSON.stringify({ key, fn, args }), safe = /^(getInit|getDay|getDashboard|getRunning|readLabel|readRunShots|parseMeal|parseMealPhotos)$/.test(fn);
   let res;
-  for (let i = 0; ; i++) {
-    try { res = await fetch(API_URL, { method: 'POST', body }); break; }
-    catch (e) {
-      if (!reads || i >= 2) throw new Error('通信できませんでした。電波の良い場所でもう一度開いてください（' + (e.message || e) + '）');
-      await new Promise(r => setTimeout(r, 800 * (i + 1)));
+  inflight++;
+  try {
+    for (let i = 0; ; i++) {
+      try { res = await fetch(API_URL, { method: 'POST', body }); break; }
+      catch (e) {
+        if (!safe || i >= 2) throw new Error('通信できませんでした。電波の良い場所でもう一度試してください（' + (e.message || e) + '）');
+        await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+      }
     }
-  }
+  } finally { inflight--; }
   const j = await res.json();
   if (!j.ok) {
     if (/キー/.test(j.error)) { try { localStorage.removeItem(KEY_NAME); } catch (e) {} }
@@ -59,7 +64,7 @@ async function call(fn, ...args) {
 
 // 新しい版が公開されていたら自動で読み込み直す（GitHub Pages は最大10分キャッシュするため）
 async function checkUpdate() {
-  if (typeof APP_VERSION === 'undefined' || (typeof S !== 'undefined' && (S.dirty || S.sending))) return;
+  if (typeof APP_VERSION === 'undefined' || inflight > 0 || (typeof S !== 'undefined' && (S.dirty || S.sending))) return;
   try {
     const t = await (await fetch(location.pathname + '?nc=' + Date.now(), { cache: 'no-store' })).text();
     const v = (t.match(/APP_VERSION = '([^']+)'/) || [])[1];

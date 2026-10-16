@@ -12,9 +12,9 @@
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>const APP_VERSION = '20261016164407';</script>
-<script src="nav.js?v=20261016164407"></script>
-<script src="api.js?v=20261016164407"></script>
+<script>const APP_VERSION = '20261016165856';</script>
+<script src="nav.js?v=20261016165856"></script>
+<script src="api.js?v=20261016165856"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -394,6 +394,12 @@ function renderAdding() {
   const el = document.getElementById('adding'); if (!el) return;
   if (!adding) { el.innerHTML = ''; return; }
   if (adding.loading) { el.innerHTML = `<div class="summary">${adding.loading}</div>`; return; }
+  if (!adding.list.length) { // 読み取りに失敗したとき
+    el.innerHTML = adding.info ? `<div class="summary">${esc(adding.note)}</div><div class="adds"><button onclick="adding=null;renderAdding()">閉じる</button></div>`
+      : `<div class="summary" style="color:var(--danger)">${esc(adding.note || '読み取れませんでした')}</div>
+      <div class="adds"><button class="main" onclick="pickShots()">もう一度選ぶ</button><button onclick="adding=null;renderAdding()">閉じる</button></div>`;
+    return;
+  }
   el.innerHTML = `${adding.note ? `<div class="summary">${esc(adding.note)}</div>` : ''}
     ${adding.list.map((r, i) => `<div class="edit-run">
       <div><label>日付</label><input id="a-date-${i}" type="date" value="${esc(r.date)}"></div>
@@ -423,7 +429,7 @@ function pickShots() {
     const files = [...inp.files].slice(0, 8); if (!files.length) return;
     adding = { loading: `スクリーンショット${files.length}枚を読み取っています…（10〜20秒）` }; renderAdding();
     try {
-      const imgs = []; for (const f of files) imgs.push(await shrink(f, 1400));
+      const imgs = []; for (const f of files) imgs.push(await shrink(f, 1200, 0.8));
       const r = await call('readRunShots', imgs);
       if (!r.runs.length) throw new Error('走行記録が見つかりませんでした。距離や時間が写っている画面を選んでください');
       adding = { list: r.runs, note: r.note };
@@ -439,7 +445,7 @@ async function saveRuns() {
   if (!list.length) { document.getElementById('a-err').textContent = '日付と距離を入力してください'; return; }
   try {
     const d = await call('addRuns', list);
-    adding = d.skipped ? { list: [], note: `${d.added}件を記録しました（${d.skipped}件はすでに記録済みのため飛ばしました）` } : null;
+    adding = d.skipped ? { list: [], info: true, note: `${d.added}件を記録しました（${d.skipped}件はすでに記録済みのため飛ばしました）` } : null;
     load(d);
   } catch (e) { document.getElementById('a-err').textContent = e.message || e; }
 }
@@ -449,7 +455,7 @@ async function delRun(id) {
   try { load(await call('deleteRun', id)); } catch (e) { alert(e.message || e); }
 }
 
-function shrink(file, max) {
+function shrink(file, max, q = 0.85) {
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => {
@@ -458,7 +464,7 @@ function shrink(file, max) {
       cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
       cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
       URL.revokeObjectURL(img.src);
-      res(cv.toDataURL('image/jpeg', 0.85).split(',')[1]);
+      res(cv.toDataURL('image/jpeg', q).split(',')[1]);
     };
     img.onerror = () => rej(new Error('画像を開けませんでした'));
     img.src = URL.createObjectURL(file);
