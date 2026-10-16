@@ -47,14 +47,14 @@
   document.head.appendChild(style);
   const el = document.createElement('aside');
   el.className = 'side-nav';
-  el.innerHTML = `<div class="logo"><img src="icon.png" alt="">ダイエット<small>diet</small></div>
+  el.innerHTML = `<div class="logo"><img src="icon.png" alt="">体型管理<small>body</small></div>
     <nav>${items.map(([k, href, label, ic]) => `<a href="${href}" class="${k === page ? 'on' : ''}">${ic}${label}</a>`).join('')}</nav>
     <div class="foot" id="nav-goal"></div>`;
   const links = items.map(([k, href, label, ic]) => `<a href="${href}" class="${k === page ? 'on' : ''}">${ic}${label}</a>`).join('');
   const mob = document.createElement('div');
   mob.className = 'm-nav';
   mob.innerHTML = `<div class="ov" onclick="closeNav()"></div><div class="pn">
-    <div class="logo"><img src="icon.png" alt="">ダイエット</div><nav>${links}</nav><div class="foot nav-goal"></div></div>`;
+    <div class="logo"><img src="icon.png" alt="">体型管理</div><nav>${links}</nav><div class="foot nav-goal"></div></div>`;
   window.openNav = () => mob.classList.add('open');
   window.closeNav = () => mob.classList.remove('open');
   // 各ページのヘッダーに置くボタン
