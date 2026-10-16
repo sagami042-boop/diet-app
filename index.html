@@ -12,9 +12,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261016223947';</script>
-<script src="nav.js?v=20261016223947"></script>
-<script src="api.js?v=20261016223947"></script>
+<script>const APP_VERSION = '20261016224446';</script>
+<script src="nav.js?v=20261016224446"></script>
+<script src="api.js?v=20261016224446"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -84,6 +84,14 @@
   .cur > div { flex: 1; min-width: 0; }
   .cur b { display: block; font-size: 15px; }
   .layout { display: block; }
+  .tapq { cursor: pointer; text-decoration: underline dotted var(--sub); text-underline-offset: 3px; }
+  .qty-box { background: var(--card); border-radius: 14px; padding: 4px 12px 10px; margin-top: 10px; }
+  .qchips { display: flex; gap: 6px; align-items: center; }
+  .qchips button { flex: none; min-width: 46px; height: 38px; border-radius: 99px; background: var(--bg); font-weight: 600; }
+  .qchips button.on { background: var(--accent); color: var(--on-accent); }
+  .qchips input { flex: 1; text-align: right; }
+  .nf-prev { font-size: 13px; margin-top: 8px; color: var(--sub); }
+  .nf-prev b { color: var(--accent); }
   .ai-in { display: flex; gap: 8px; margin-bottom: 10px; }
   .ai-in input { flex: 1; }
   .ai-in button { flex: none; padding: 0 16px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
@@ -309,8 +317,18 @@ function bar(v, goal) {
   return `<div class="bar ${goal && v > goal ? 'over' : ''}"><div style="width:${pct}%"></div></div>`;
 }
 
-function stepper(val, minus, plus, label) {
-  return `<span class="step"><button onclick="${minus}" aria-label="${label}を減らす">−</button><span>${val}</span><button onclick="${plus}" aria-label="${label}を増やす">＋</button></span>`;
+function stepper(val, minus, plus, label, tap) {
+  return `<span class="step"><button onclick="${minus}" aria-label="${label}を減らす">−</button><span ${tap ? `class="tapq" onclick="${tap}" title="タップして直接入力"` : ''}>${val}</span><button onclick="${plus}" aria-label="${label}を増やす">＋</button></span>`;
+}
+
+// 個数の数字をタップして、0.5 のような小数を直接入力する
+function editQty(idx) {
+  const v = prompt('食べた量を入力（1単位の何個分か。例：0.5）', S.items[idx].qty);
+  if (v == null) return;
+  const q = parseFloat(v);
+  if (!(q >= 0)) return;
+  if (q === 0) return removeItem(idx);
+  S.items[idx].qty = Math.round(q * 100) / 100; touch();
 }
 
 function render() {
@@ -366,7 +384,7 @@ function render() {
       if (f) ['p', 'f', 'c'].forEach(k => m[k] += f[k] * it.qty);
       rows += `<div class="row">
         <button class="name" onclick="openPicker('replace',${idx})"><span class="nm">${esc(it.name)}<span class="sub">${esc(f ? f.unit : '?')}</span></span>${f ? `<span class="ipfc"><i style="color:var(--p)">P</i>${fmt1(f.p * it.qty)} <i style="color:var(--f)">F</i>${fmt1(f.f * it.qty)} <i style="color:var(--c)">C</i>${fmt1(f.c * it.qty)}</span>` : ''}</button>
-        ${stepper(it.qty, `qty(${idx},-1)`, `qty(${idx},1)`, '個数')}
+        ${stepper(it.qty, `qty(${idx},-1)`, `qty(${idx},1)`, '個数', `editQty(${idx})`)}
         <span class="sub kc">${r(kc)} kcal</span>
       </div>`;
     });
@@ -693,6 +711,8 @@ function openNewFood(v) {
   const val = x => x == null || x === '' ? '' : esc(x);
   const lbl = t => `<span class="sub" style="display:block;margin:8px 0 2px">${t}</span>`;
   const editing = v.editName != null, onceEdit = v.onceIdx != null;
+  const showQty = picker && picker.mode === 'add' && !editing && !onceEdit; // 食事に追加するときだけ「食べた量」を出す
+  setTimeout(nfPreview);
   sheet(`<h2>${editing || onceEdit ? '食品を編集' : v.name != null ? '読み取り結果を確認' : '新しい食品を登録'}<button onclick="${editing ? 'backToEdit()' : 'openPicker(picker.mode, picker.arg)'}">戻る</button></h2>
     ${v.note ? `<div class="status ${v.source === 'estimate' ? 'copied' : 'ok'}" style="margin:0 0 8px">${v.source === 'estimate' ? '写真からの推定値です。' : '栄養成分表示から読み取りました。'}${esc(v.note)}</div>` : ''}
     ${lbl('食品名')}<input id="nf-name" placeholder="食品名（例：サバ缶）" value="${val(v.name)}">
@@ -704,6 +724,9 @@ function openNewFood(v) {
       <div>${lbl('F (g)')}<input id="nf-f" data-pfc="nf:f" type="number" inputmode="decimal" value="${val(v.f)}"></div>
       <div>${lbl('C (g)')}<input id="nf-c" data-pfc="nf:c" type="number" inputmode="decimal" value="${val(v.c)}"></div>
     </div>
+    ${showQty ? `<div class="qty-box">${lbl('食べた量（上の1単位の何個分か）')}
+      <div class="qchips">${[0.5, 1, 1.5, 2].map(q => `<button onclick="setNfQty(${q})">${q}</button>`).join('')}<input id="nf-qty" type="number" inputmode="decimal" step="0.1" min="0" value="1"></div>
+      <div class="nf-prev" id="nf-prev"></div></div>` : ''}
     <div class="err" id="nf-err"></div>
     ${picker && picker.mode === 'manage' && !editing ? `<button class="btn-main" onclick="submitFood()">食品リストに登録</button>`
     : onceEdit ? `<button class="btn-main" onclick="submitOnceEdit(${v.onceIdx})">保存</button>
@@ -764,10 +787,21 @@ function readFoodForm() {
 }
 
 // 食品リストに登録せず、この日の記録にだけ追加する
+// 「食べた量」：0.5個なら半分の値で記録する（食品リストには1単位あたりの値で登録）
+function nfQty() { const el = document.getElementById('nf-qty'); const q = el ? parseFloat(el.value) : 1; return q > 0 ? Math.round(q * 100) / 100 : 1; }
+function setNfQty(q) { const el = document.getElementById('nf-qty'); if (el) { el.value = q; nfPreview(); } }
+function nfPreview() {
+  const box = document.getElementById('nf-prev'); if (!box) return;
+  const g = id => parseFloat(document.getElementById(id)?.value) || 0, q = nfQty();
+  document.querySelectorAll('.qchips button').forEach(b => b.classList.toggle('on', +b.textContent === q));
+  box.innerHTML = `→ 記録される量：<b>${r(g('nf-kcal') * q)}kcal</b> ・ P${fmt1(g('nf-p') * q)} F${fmt1(g('nf-f') * q)} C${fmt1(g('nf-c') * q)}`;
+}
+document.addEventListener('input', e => { if (e.target.id && e.target.id.startsWith('nf-')) setTimeout(nfPreview); }); // kcal の自動計算のあとに更新
+
 function addOnce() {
   const food = readFoodForm(); if (!food) return;
   const once = { unit: food.unit, kcal: +food.kcal || 0, p: +food.p || 0, f: +food.f || 0, c: +food.c || 0 };
-  if (picker.mode === 'add') S.items.push({ meal: picker.arg, name: food.name, qty: 1, once });
+  if (picker.mode === 'add') S.items.push({ meal: picker.arg, name: food.name, qty: nfQty(), once });
   else Object.assign(S.items[picker.arg], { name: food.name, once });
   closeSheet(); touch();
 }
@@ -776,8 +810,10 @@ async function submitFood() {
   const food = readFoodForm(); if (!food) return;
   const err = document.getElementById('nf-err');
   try {
+    const q = nfQty();
     setFoods(await call('addFood', food)); saveBase();
-    pick(food.name);
+    if (picker.mode === 'add') { S.items.push({ meal: picker.arg, name: food.name, qty: q }); closeSheet(); touch(); }
+    else pick(food.name);
   } catch (e) { err.textContent = e.message || String(e); }
 }
 
