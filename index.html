@@ -12,9 +12,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261016151920';</script>
-<script src="nav.js?v=20261016151920"></script>
-<script src="api.js?v=20261016151920"></script>
+<script>const APP_VERSION = '20261016152454';</script>
+<script src="nav.js?v=20261016152454"></script>
+<script src="api.js?v=20261016152454"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -351,7 +351,7 @@ function render() {
     <div class="card">
       <div class="meal-h"><b>活動</b><span class="sub" id="act-kcal">${(() => { const b = burn(); return r(b.walk + b.run + b.other); })()} kcal</span></div>
       <div class="arow"><span>歩数</span>${numInput('steps', S.act.steps)}<span class="u">歩</span></div>
-      <div class="arow"><span>ランニング</span>${numInput('runKm', S.act.runKm, 's')}<span class="u">km</span>${numInput('runMin', S.act.runMin, 's')}<span class="u">分</span></div>
+      <div class="arow"><span>ランニング</span><span class="sub" style="flex:none">${S.act.runKm ? `${S.act.runKm}km・${S.act.runMin || 0}分` : '記録なし'}</span><a href="run.html" style="font-size:13px;color:var(--accent);font-weight:600;text-decoration:none;flex:none">記録する ›</a></div>
       <div class="arow"><span>その他の運動</span>${numInput('other', S.act.other)}<span class="u">kcal</span></div>
     </div>`;
 

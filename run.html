@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ランニング</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="体型管理">
+<meta name="theme-color" content="#fff6f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>const APP_VERSION = '20261016152454';</script>
+<script src="nav.js?v=20261016152454"></script>
+<script src="api.js?v=20261016152454"></script>
+<style>
+  :root {
+    --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
+    --accent: #ff7a3d; --accent-soft: #ffe8da; --on-accent: #ffffff; --danger: #d64545; --ok: #14895c;
+    --p: #2a62c9; --p-bg: #e8f1ff; --f: #b97500; --f-bg: #fff0d6; --c: #14895c; --c-bg: #e0f6ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1410; --card: #261e18; --text: #f7ece4; --sub: #b59a87; --line: #3a2e25; --track: #3a2b20;
+      --accent: #ff8a52; --accent-soft: #4a2c1c; --on-accent: #1a1410; --danger: #ff7b7b; --ok: #5fd0a0;
+      --p: #8db4ff; --p-bg: #1f2b44; --f: #f2b851; --f-bg: #3d2e12; --c: #5fd0a0; --c-bg: #16362a;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  button:active { transform: scale(0.97); }
+  input { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; outline: none; }
+  input:focus { border-color: var(--accent); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 16px 18px 40px; }
+  .top { display: flex; align-items: center; gap: 12px; }
+  .top h1 { font-size: 26px; font-weight: 700; margin: 0; flex: 1; }
+  .card { background: var(--card); border-radius: 20px; padding: 16px 18px; margin-top: 12px; }
+  .card h2 { font-size: 17px; font-weight: 700; margin: 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .card h2 button { font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 6px 12px; flex: none; }
+  .sub { font-size: 12px; color: var(--sub); }
+  .goal { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; margin-top: 10px; }
+  .goal .days { text-align: center; background: var(--accent-soft); color: var(--accent); border-radius: 16px; padding: 10px 14px; }
+  .goal .days b { display: block; font-size: 30px; line-height: 1; }
+  .goal .nm { font-size: 17px; font-weight: 700; }
+  .kv { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; font-size: 13px; color: var(--sub); }
+  .kv b { color: var(--text); font-size: 15px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  label.l { display: block; font-size: 12px; color: var(--sub); margin: 10px 0 3px; }
+  .btn-main { width: 100%; height: 46px; margin-top: 12px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .btn-soft { width: 100%; height: 42px; margin-top: 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .err { color: var(--danger); font-size: 13px; margin-top: 8px; }
+  .summary { margin-top: 8px; font-size: 14px; line-height: 1.6; background: var(--bg); border-radius: 12px; padding: 10px 12px; }
+  .plan { margin-top: 10px; }
+  .pd { display: grid; grid-template-columns: 62px 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .pd:first-child { border-top: 0; }
+  .pd.today { background: var(--accent-soft); border-radius: 12px; padding: 10px 8px; border-top-color: transparent; }
+  .pd.past { opacity: 0.55; }
+  .pd .dt { font-size: 13px; font-weight: 600; }
+  .pd .dt small { display: block; font-weight: 400; color: var(--sub); font-size: 11px; }
+  .pd .body { min-width: 0; }
+  .pd .det { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  .pd .res { font-size: 12px; text-align: right; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 99px; padding: 2px 9px; margin-right: 6px; }
+  .done { color: var(--ok); font-weight: 700; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 10px; }
+  .stat { background: var(--bg); border-radius: 14px; padding: 10px 12px; }
+  .stat b { display: block; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .stat b small { font-size: 12px; font-weight: 400; color: var(--sub); }
+  .chart { position: relative; height: 200px; margin-top: 10px; }
+  .adds { display: flex; gap: 8px; margin-top: 10px; }
+  .adds button { flex: 1; height: 42px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .adds button.main { background: var(--accent); color: var(--on-accent); }
+  .rl { display: grid; grid-template-columns: 54px 1fr auto 34px; gap: 8px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .rl .km { font-weight: 700; }
+  .rl .x { width: 30px; height: 30px; border-radius: 50%; background: var(--bg); color: var(--sub); }
+  .edit-run { background: var(--bg); border-radius: 14px; padding: 10px 12px; margin-top: 8px; display: grid; grid-template-columns: 1.3fr 0.8fr 1fr 0.7fr 34px; gap: 6px; align-items: end; }
+  .edit-run label { font-size: 11px; color: var(--sub); display: block; margin-bottom: 2px; }
+  .edit-run input { padding: 8px 6px; }
+  .empty { color: var(--sub); text-align: center; padding: 18px 0; font-size: 14px; }
+  @media (min-width: 900px) {
+    .wrap { padding: 24px 32px 40px; }
+    .cols { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+    .cols .card:first-child { margin-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>ランニング</h1><span data-burger></span></div>
+  <div id="goal" class="card"><div class="empty">読み込み中…</div></div>
+  <div class="cols">
+    <div><div id="plan" class="card"></div></div>
+    <div><div id="runs" class="card"></div></div>
+  </div>
+</div>
+
+<script>
+let R = null, chart = null, goalEdit = false, adding = null; // adding: 追加前の確認中の記録
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const dt = s => new Date(s + 'T00:00:00');
+const md = s => { const d = dt(s); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const wd = s => '日月火水木金土'[dt(s).getDay()];
+const hms = sec => { sec = Math.round(sec); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60; return (h ? `${h}:${String(m).padStart(2, '0')}` : m) + ':' + String(x).padStart(2, '0'); };
+const pace = (sec, km) => sec && km ? hms(sec / km) + '/km' : '–';
+// 「52:30」「1:05:20」「52」（分）を秒に
+const toSec = t => { t = String(t || '').trim(); if (!t) return 0; const p = t.split(':').map(Number); if (p.some(isNaN)) return 0; return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p.length === 2 ? p[0] * 60 + p[1] : p[0] * 60; };
+const TYPE = { 'イージー': ['--c-bg', '--c'], 'ペース走': ['--f-bg', '--f'], 'インターバル': ['--accent-soft', '--accent'], 'ロング走': ['--p-bg', '--p'], 'レース': ['--accent', '--on-accent'], '休養': ['--bg', '--sub'] };
+const tag = t => { const [b, c] = TYPE[t] || ['--bg', '--sub']; return `<span class="tag" style="background:var(${b});color:var(${c})">${esc(t)}</span>`; };
+
+function load(d) { R = d; cacheSet('run', d); render(); }
+
+function render() {
+  renderGoal(); renderPlan(); renderRuns();
+  const g = R.goal;
+  if (window.setNavGoal) setNavGoal(g.name && g.date ? `${esc(g.name)}<br>あと <b>${Math.max(0, Math.round((dt(g.date) - dt(R.today)) / 864e5))}</b> 日` : '大会の目標を登録しましょう');
+}
+
+// ---- 大会の目標 ----
+function renderGoal() {
+  const g = R.goal, el = document.getElementById('goal');
+  if (!g.name || goalEdit) {
+    el.innerHTML = `<h2>大会の目標${g.name ? '<button onclick="goalEdit=false;renderGoal()">やめる</button>' : ''}</h2>
+      <label class="l">大会名</label><input id="g-name" value="${esc(g.name)}" placeholder="例：〇〇マラソン">
+      <div class="grid2">
+        <div><label class="l">開催日</label><input id="g-date" type="date" value="${esc(g.date)}"></div>
+        <div><label class="l">距離（km）</label><input id="g-km" type="number" inputmode="decimal" value="${g.km || ''}" placeholder="例：21.0975"></div>
+      </div>
+      <label class="l">目標タイム</label><input id="g-target" value="${esc(g.target)}" placeholder="例：1:59:59（なければ空欄）">
+      <div class="err" id="g-err"></div>
+      <button class="btn-main" onclick="saveGoal()">保存</button>`;
+    return;
+  }
+  const days = Math.round((dt(g.date) - dt(R.today)) / 864e5), tsec = toSec(g.target);
+  el.innerHTML = `<h2>大会の目標<button onclick="goalEdit=true;renderGoal()">編集</button></h2>
+    <div class="goal">
+      <div class="days">${days >= 0 ? `あと<b>${days}</b>日` : `<b>終了</b>`}</div>
+      <div><div class="nm">${esc(g.name)}</div>
+        <div class="kv"><span>${esc(g.date)}（${wd(g.date)}）</span><span>距離 <b>${g.km}</b>km</span>${tsec ? `<span>目標 <b>${esc(g.target)}</b></span><span>必要ペース <b>${pace(tsec, g.km)}</b></span>` : ''}</div></div>
+    </div>`;
+}
+
+async function saveGoal() {
+  const v = id => document.getElementById(id).value.trim();
+  const g = { name: v('g-name'), date: v('g-date'), km: v('g-km'), target: v('g-target') };
+  const err = document.getElementById('g-err');
+  if (!g.name || !g.date || !g.km) { err.textContent = '大会名・開催日・距離を入力してください'; return; }
+  if (g.target && !toSec(g.target)) { err.textContent = '目標タイムは「1:59:59」のように入力してください'; return; }
+  try { goalEdit = false; load(await call('saveGoal', g)); } catch (e) { err.textContent = e.message || e; }
+}
+
+// ---- 練習スケジュール（今日から14日分） ----
+function renderPlan() {
+  const el = document.getElementById('plan');
+  const from = ymd(new Date(dt(R.today).getTime() - 2 * 864e5)), to = ymd(new Date(dt(R.today).getTime() + 13 * 864e5));
+  const plan = R.plan.filter(p => p.date >= from && p.date <= to);
+  const ran = d => R.runs.filter(r => r.date === d);
+  const rows = plan.map(p => {
+    const rs = ran(p.date), km = rs.reduce((x, r) => x + r.km, 0);
+    const res = rs.length ? `<span class="done">✓ ${km.toFixed(1)}km</span>` : p.date < R.today && p.type !== '休養' ? '<span class="sub">未実施</span>' : '';
+    return `<div class="pd ${p.date === R.today ? 'today' : p.date < R.today ? 'past' : ''}">
+      <div class="dt">${md(p.date)}（${wd(p.date)}）<small>${p.date === R.today ? '今日' : ''}</small></div>
+      <div class="body">${tag(p.type)}${p.km ? `<b>${p.km}km</b>` : ''}${p.pace ? ` <span class="sub">${esc(p.pace)}</span>` : ''}${p.detail ? `<div class="det">${esc(p.detail)}</div>` : ''}</div>
+      <div class="res">${res}</div></div>`;
+  }).join('');
+  el.innerHTML = `<h2>練習スケジュール${plan.length ? '<button onclick="toggleReplan()">組み直す</button>' : ''}</h2>
+    ${R.planSummary && plan.length ? `<div class="summary">${esc(R.planSummary)}</div>` : ''}
+    <div id="replan" style="display:${plan.length ? 'none' : 'block'}">
+      ${plan.length ? '' : `<div class="sub" style="margin-top:8px">${R.goal.name ? '大会の目標と最近の走行記録から、トレーナーが今日から2週間分のメニューを組みます。' : '先に大会の目標を登録すると、それに合わせたメニューになります。'}</div>`}
+      <label class="l">都合や希望（任意）</label>
+      <input id="plan-note" placeholder="例：水曜は走れない／土曜にロング走したい／膝が少し痛い">
+      <div class="err" id="plan-err"></div>
+      <button class="btn-main" id="plan-btn" onclick="makePlan()">${plan.length ? 'この内容で組み直す' : 'トレーナーに2週間分を組んでもらう'}</button>
+    </div>
+    <div class="plan">${rows}</div>`;
+}
+function toggleReplan() { const r = document.getElementById('replan'); r.style.display = r.style.display === 'none' ? 'block' : 'none'; }
+
+async function makePlan() {
+  const btn = document.getElementById('plan-btn'), err = document.getElementById('plan-err');
+  btn.textContent = 'トレーナーが組んでいます…（20〜40秒）'; btn.disabled = true;
+  try { load(await call('makePlan', { start: R.today, note: document.getElementById('plan-note').value.trim() })); }
+  catch (e) { err.textContent = e.message || e; btn.textContent = 'もう一度試す'; btn.disabled = false; }
+}
+
+// ---- 走行記録 ----
+function renderRuns() {
+  const el = document.getElementById('runs');
+  const runs = R.runs;
+  // 週ごとの距離（月曜はじまり、直近12週）
+  const mon = s => { const d = dt(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return ymd(d); };
+  const weeks = []; let w = dt(mon(R.today)); w.setDate(w.getDate() - 77);
+  for (let i = 0; i < 12; i++) { weeks.push(ymd(w)); w.setDate(w.getDate() + 7); }
+  const wkKm = weeks.map(k => runs.filter(r => mon(r.date) === k).reduce((x, r) => x + r.km, 0));
+  const month = R.today.slice(0, 7), mKm = runs.filter(r => r.date.startsWith(month)).reduce((x, r) => x + r.km, 0);
+  const last4 = wkKm.slice(-5, -1), avg4 = last4.reduce((x, y) => x + y, 0) / 4;
+  const longest = runs.reduce((m, r) => Math.max(m, r.km), 0);
+  el.innerHTML = `<h2>走行記録</h2>
+    <div class="stats">
+      <div class="stat"><span class="sub">今週</span><b>${wkKm[11].toFixed(1)}<small> km</small></b></div>
+      <div class="stat"><span class="sub">今月</span><b>${mKm.toFixed(1)}<small> km</small></b></div>
+      <div class="stat"><span class="sub">直近4週の平均</span><b>${avg4.toFixed(1)}<small> km/週</small></b></div>
+      <div class="stat"><span class="sub">最長</span><b>${longest.toFixed(1)}<small> km</small></b></div>
+    </div>
+    <div class="chart"><canvas id="wk"></canvas></div>
+    <div class="adds"><button class="main" onclick="pickShots()">NRCのスクショから追加</button><button onclick="manualRun()">手入力</button></div>
+    <div id="adding"></div>
+    <div style="margin-top:6px">${runs.length ? [...runs].reverse().slice(0, 40).map(r => `<div class="rl">
+      <span class="sub">${md(r.date)}（${wd(r.date)}）</span>
+      <span><span class="km">${r.km}km</span> <span class="sub">${r.sec ? hms(r.sec) : ''}</span></span>
+      <span class="sub">${pace(r.sec, r.km)}${r.hr ? ` ・ ♥${r.hr}` : ''}</span>
+      <button class="x" onclick="delRun('${esc(r.id)}')" aria-label="削除">×</button></div>`).join('') : '<div class="empty">まだ記録がありません</div>'}</div>`;
+  renderAdding();
+  if (chart) chart.destroy();
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  chart = new Chart(document.getElementById('wk'), {
+    type: 'bar',
+    data: { labels: weeks.map(k => md(k) + '〜'), datasets: [{ label: '距離', data: wkKm.map(x => Math.round(x * 10) / 10), backgroundColor: css('--accent'), borderRadius: 4, maxBarThickness: 26 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: i => `${i.raw}km` } } },
+      scales: { x: { grid: { display: false }, ticks: { color: css('--sub'), maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } }, y: { beginAtZero: true, grid: { color: css('--line') }, ticks: { color: css('--sub') } } } },
+  });
+}
+
+// 追加前の確認（スクショ読み取り結果・手入力）
+function renderAdding() {
+  const el = document.getElementById('adding'); if (!el) return;
+  if (!adding) { el.innerHTML = ''; return; }
+  if (adding.loading) { el.innerHTML = `<div class="summary">${adding.loading}</div>`; return; }
+  el.innerHTML = `${adding.note ? `<div class="summary">${esc(adding.note)}</div>` : ''}
+    ${adding.list.map((r, i) => `<div class="edit-run">
+      <div><label>日付</label><input id="a-date-${i}" type="date" value="${esc(r.date)}"></div>
+      <div><label>距離km</label><input id="a-km-${i}" type="number" inputmode="decimal" value="${r.km || ''}"></div>
+      <div><label>時間</label><input id="a-time-${i}" value="${r.sec ? hms(r.sec) : ''}" placeholder="52:30"></div>
+      <div><label>心拍</label><input id="a-hr-${i}" type="number" inputmode="numeric" value="${r.hr || ''}"></div>
+      <button class="x" style="width:30px;height:30px;border-radius:50%;background:var(--card);color:var(--sub)" onclick="readAdding();adding.list.splice(${i},1);renderAdding()" aria-label="外す">×</button>
+    </div>`).join('')}
+    <div class="err" id="a-err"></div>
+    <div class="adds"><button class="main" onclick="saveRuns()">${adding.list.length}件を記録する</button><button onclick="adding=null;renderAdding()">やめる</button></div>`;
+}
+function readAdding() {
+  adding.list.forEach((r, i) => {
+    const v = k => document.getElementById(`a-${k}-${i}`)?.value.trim();
+    r.date = v('date') || r.date; r.km = +v('km') || 0; r.sec = toSec(v('time')); r.hr = +v('hr') || null;
+  });
+}
+function manualRun() { adding = { list: [{ date: R.today, km: '', sec: 0, hr: null }] }; renderAdding(); }
+
+function pickShots() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+  inp.onchange = async () => {
+    const files = [...inp.files].slice(0, 8); if (!files.length) return;
+    adding = { loading: `スクリーンショット${files.length}枚を読み取っています…（10〜20秒）` }; renderAdding();
+    try {
+      const imgs = []; for (const f of files) imgs.push(await shrink(f, 1400));
+      const r = await call('readRunShots', imgs);
+      if (!r.runs.length) throw new Error('走行記録が見つかりませんでした。距離や時間が写っている画面を選んでください');
+      adding = { list: r.runs, note: r.note };
+    } catch (e) { adding = { list: [], note: e.message || String(e) }; }
+    renderAdding();
+  };
+  inp.click();
+}
+
+async function saveRuns() {
+  readAdding();
+  const list = adding.list.filter(r => r.date && r.km > 0);
+  if (!list.length) { document.getElementById('a-err').textContent = '日付と距離を入力してください'; return; }
+  try {
+    const d = await call('addRuns', list);
+    adding = d.skipped ? { list: [], note: `${d.added}件を記録しました（${d.skipped}件はすでに記録済みのため飛ばしました）` } : null;
+    load(d);
+  } catch (e) { document.getElementById('a-err').textContent = e.message || e; }
+}
+
+async function delRun(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  try { load(await call('deleteRun', id)); } catch (e) { alert(e.message || e); }
+}
+
+function shrink(file, max) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(img.src);
+      res(cv.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = () => rej(new Error('画像を開けませんでした'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// 前回のデータですぐ表示し、裏で最新を取る
+const hit = cacheGet('run');
+if (hit) { R = hit; render(); }
+call('getRunning').then(d => { if (JSON.stringify(d) !== JSON.stringify(R)) load(d); })
+  .catch(e => { if (!hit) document.getElementById('goal').innerHTML = `<div class="empty">読み込めませんでした。<br>${esc(e.message || e)}</div>`; });
+</script>
+</body>
+</html>
