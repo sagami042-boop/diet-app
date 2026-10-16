@@ -12,9 +12,9 @@
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>const APP_VERSION = '20261016155825';</script>
-<script src="nav.js?v=20261016155825"></script>
-<script src="api.js?v=20261016155825"></script>
+<script>const APP_VERSION = '20261016164101';</script>
+<script src="nav.js?v=20261016164101"></script>
+<script src="api.js?v=20261016164101"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -345,7 +345,7 @@ function renderRun() {
     </div>
     <div class="sec"><h3>自分のコメント（感想・反省・体調など）</h3>
       <textarea id="run-memo" placeholder="例：後半きつかった。昼食から時間が空いていて空腹気味。右膝に少し違和感">${esc(memo != null ? memo : r.memo)}</textarea>
-      <button class="btn-soft" onclick="saveMemo()">区分とコメントを保存</button>
+      <button class="btn-soft" id="memo-btn" onclick="saveMemo()">区分とコメントを保存</button>
     </div>
     <div class="sec"><h3>トレーナーの分析${a ? ` <span class="sub" style="font-weight:400">${esc(a.at || '')}</span>` : ''}</h3>
       ${analyzing ? '<div class="sub" style="padding:10px 0">走りを分析しています…（20〜30秒）</div>' : a ? `<div class="ana">
@@ -369,7 +369,13 @@ function setKind(race) {
 async function saveMemo() {
   const r = R.runs.find(x => x.id === openId), race = kindRace == null ? isRace(r) : kindRace;
   const v = { memo: document.getElementById('run-memo').value, type: race ? 'レース' : '練習', race: race ? document.getElementById('run-race').value.trim() : raceName(r) };
-  try { load(await call('updateRun', openId, v)); kindRace = null; renderRun(); } catch (e) { alert(e.message || e); }
+  const btn = document.getElementById('memo-btn');
+  btn.textContent = '保存中…'; btn.disabled = true;
+  try {
+    load(await call('updateRun', openId, v)); kindRace = null; renderRun();
+    const b2 = document.getElementById('memo-btn'); // 描き直したあとのボタンに「保存しました」を出す
+    if (b2) { b2.textContent = '✓ 保存しました'; b2.style.background = 'var(--c-bg)'; b2.style.color = 'var(--ok)'; setTimeout(() => { if (b2.isConnected) { b2.textContent = '区分とコメントを保存'; b2.style.background = ''; b2.style.color = ''; } }, 2500); }
+  } catch (e) { btn.textContent = '区分とコメントを保存'; btn.disabled = false; alert('保存できませんでした: ' + (e.message || e)); }
 }
 
 async function analyzeRun() {
