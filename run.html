@@ -12,9 +12,9 @@
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>const APP_VERSION = '20261016173558';</script>
-<script src="nav.js?v=20261016173558"></script>
-<script src="api.js?v=20261016173558"></script>
+<script>const APP_VERSION = '20261016174006';</script>
+<script src="nav.js?v=20261016174006"></script>
+<script src="api.js?v=20261016174006"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -87,6 +87,12 @@
   .msg.me { align-self: flex-end; background: var(--accent-soft); border-bottom-right-radius: 4px; }
   .msg.co { align-self: flex-start; background: var(--bg); border-bottom-left-radius: 4px; }
   .msg.wait { color: var(--sub); }
+  .thr { display: block; width: 100%; text-align: left; background: var(--bg); border-radius: 14px; padding: 12px 14px; margin-top: 8px; }
+  .th-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .th-h b { font-size: 15px; }
+  .th-l { font-size: 13px; line-height: 1.6; margin-top: 6px; }
+  .th-l span { font-size: 11px; font-weight: 700; color: var(--accent); }
+  .th-l.ok span { color: var(--ok); }
   .quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
   .quick button { font-size: 12px; background: var(--bg); color: var(--text); border-radius: 99px; padding: 6px 10px; }
   .chatin { display: flex; gap: 8px; margin-top: 10px; align-items: flex-end; }
@@ -245,7 +251,7 @@ function renderChat() {
   const el = document.getElementById('chat');
   const msgs = (R.chat || []).slice();
   if (chatSending) msgs.push({ role: 'user', text: chatSending }, { role: 'assistant', text: '記録を見ながら考えています…', wait: true });
-  el.innerHTML = `<h2>コーチに相談${(R.chat || []).length ? '<button onclick="clearChat()">会話をリセット</button>' : ''}</h2>
+  el.innerHTML = `<h2>コーチに相談${(R.chat || []).length ? '<button onclick="clearChat()">新しい相談を始める</button>' : ''}</h2>
     <div class="sub" style="margin-top:4px">走行記録・自分のコメント・分析結果・大会目標・練習予定を踏まえて答えます。</div>
     <div class="chatlog" id="chatlog">${msgs.length ? msgs.map(m => `<div class="msg ${m.role === 'user' ? 'me' : 'co'}${m.wait ? ' wait' : ''}">${esc(m.text).replace(/\n/g, '<br>')}${m.at ? `<small>${esc(m.at)}</small>` : ''}</div>`).join('')
       : '<div class="sub" style="padding:10px 0">例えばこんなことが聞けます</div>'}</div>
@@ -253,7 +259,8 @@ function renderChat() {
     <div class="chatin"><textarea id="chat-in" rows="2" placeholder="相談したいことを書く（例：インターバルがきつくて最後まで走れない）"></textarea>
       <button onclick="sendChat()" ${chatSending ? 'disabled' : ''}>${chatSending ? '…' : '送信'}</button></div>
     <div class="err" id="chat-err"></div>
-    ${(R.chat || []).length ? '<button class="btn-soft" onclick="planFromChat()">この相談を踏まえて予定を組み直す</button>' : ''}`;
+    ${(R.chat || []).length ? '<button class="btn-soft" onclick="planFromChat()">この相談を踏まえて予定を組み直す</button>' : ''}
+    ${threadsHtml()}`;
   const log = document.getElementById('chatlog'); log.scrollTop = log.scrollHeight;
 }
 
@@ -266,9 +273,38 @@ async function sendChat(text) {
   catch (e) { chatSending = null; renderChat(); document.getElementById('chat-in').value = text; document.getElementById('chat-err').textContent = e.message || e; }
 }
 
+// 新しい相談を始める：今の会話は要約されて「相談の履歴」に残る（消えない）
 async function clearChat() {
-  if (!confirm('コーチとの会話をすべて消しますか？')) return;
-  try { load(await call('clearChat')); } catch (e) { alert(e.message || e); }
+  if (!confirm('新しい相談を始めますか？\n今の会話は要約して「相談の履歴」に残ります。')) return;
+  const b = document.querySelector('#chat h2 button'); if (b) { b.textContent = '要約して保存中…'; b.disabled = true; }
+  try { load(await call('newThread')); } catch (e) { alert(e.message || e); renderChat(); }
+}
+
+// 相談の履歴（成長ログ）
+function threadsHtml() {
+  const th = R.threads || [];
+  if (!th.length) return '';
+  const range = t => t.start && t.end && t.start !== t.end ? `${md(t.start)}〜${md(t.end)}` : t.start ? md(t.start) : '';
+  return `<h2 style="margin-top:18px">相談の履歴（成長ログ）</h2>
+    <div class="sub" style="margin-top:4px">新しい順。タップすると当時の会話を読み返せます</div>
+    ${th.map(t => `<button class="thr" onclick="openThread('${esc(t.id)}')">
+      <div class="th-h"><b>${esc(t.title)}</b><span class="sub">${range(t)}・${t.n}件</span></div>
+      ${t.issues.length ? `<div class="th-l"><span>課題</span>${t.issues.map(x => `<div>・${esc(x)}</div>`).join('')}</div>` : ''}
+      ${t.decisions.length ? `<div class="th-l ok"><span>決めたこと</span>${t.decisions.map(x => `<div>・${esc(x)}</div>`).join('')}</div>` : ''}
+    </button>`).join('')}`;
+}
+
+async function openThread(id) {
+  const t = (R.threads || []).find(x => x.id === id) || {};
+  openId = null;
+  const box = document.getElementById('mbox');
+  box.innerHTML = `<h2>${esc(t.title || '相談')}<button onclick="closeRun()">閉じる</button></h2><div class="sub" style="padding:16px 0">読み込み中…</div>`;
+  document.getElementById('modal').classList.add('open');
+  try {
+    const msgs = await call('getThread', id);
+    box.innerHTML = `<h2>${esc(t.title || '相談')}<button onclick="closeRun()">閉じる</button></h2>
+      <div class="chatlog" style="max-height:none">${msgs.map(m => `<div class="msg ${m.role === 'user' ? 'me' : 'co'}">${esc(m.text).replace(/\n/g, '<br>')}<small>${esc(m.at)}</small></div>`).join('')}</div>`;
+  } catch (e) { box.innerHTML += `<div class="err">${esc(e.message || e)}</div>`; }
 }
 
 // 相談内容を踏まえて練習予定を作り直す（サーバー側で直近の会話も渡している）
