@@ -12,9 +12,9 @@
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>const APP_VERSION = '20261016165856';</script>
-<script src="nav.js?v=20261016165856"></script>
-<script src="api.js?v=20261016165856"></script>
+<script>const APP_VERSION = '20261016173558';</script>
+<script src="nav.js?v=20261016173558"></script>
+<script src="api.js?v=20261016173558"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -81,6 +81,17 @@
   .edit-run input { padding: 8px 6px; }
   .empty { color: var(--sub); text-align: center; padding: 18px 0; font-size: 14px; }
   .rl { cursor: pointer; }
+  .chatlog { margin-top: 10px; max-height: 440px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: 88%; padding: 10px 12px; border-radius: 16px; font-size: 14px; line-height: 1.6; word-break: break-word; }
+  .msg small { display: block; font-size: 10px; color: var(--sub); margin-top: 4px; }
+  .msg.me { align-self: flex-end; background: var(--accent-soft); border-bottom-right-radius: 4px; }
+  .msg.co { align-self: flex-start; background: var(--bg); border-bottom-left-radius: 4px; }
+  .msg.wait { color: var(--sub); }
+  .quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .quick button { font-size: 12px; background: var(--bg); color: var(--text); border-radius: 99px; padding: 6px 10px; }
+  .chatin { display: flex; gap: 8px; margin-top: 10px; align-items: flex-end; }
+  .chatin textarea { min-height: 44px; flex: 1; }
+  .chatin button { flex: none; height: 44px; padding: 0 16px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
   select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; flex: none; }
   .bests { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 10px; }
   .bt { background: var(--bg); border-radius: 14px; padding: 10px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
@@ -131,7 +142,7 @@
   <div id="goal" class="card"><div class="empty">読み込み中…</div></div>
   <div id="bests" class="card"></div>
   <div class="cols">
-    <div><div id="plan" class="card"></div></div>
+    <div><div id="plan" class="card"></div><div id="chat" class="card"></div></div>
     <div><div id="runs" class="card"></div></div>
   </div>
 </div>
@@ -155,7 +166,7 @@ const tag = t => { const [b, c] = TYPE[t] || ['--bg', '--sub']; return `<span cl
 function load(d) { R = d; cacheSet('run', d); render(); }
 
 function render() {
-  renderGoal(); renderBests(); renderPlan(); renderRuns();
+  renderGoal(); renderBests(); renderPlan(); renderChat(); renderRuns();
   const g = R.goal;
   if (window.setNavGoal) setNavGoal(g.name && g.date ? `${esc(g.name)}<br>あと <b>${Math.max(0, Math.round((dt(g.date) - dt(R.today)) / 864e5))}</b> 日` : '大会の目標を登録しましょう');
 }
@@ -225,6 +236,46 @@ async function makePlan() {
   btn.textContent = 'トレーナーが組んでいます…（20〜40秒）'; btn.disabled = true;
   try { load(await call('makePlan', { start: R.today, note: document.getElementById('plan-note').value.trim() })); }
   catch (e) { err.textContent = e.message || e; btn.textContent = 'もう一度試す'; btn.disabled = false; }
+}
+
+// ---- コーチに相談（壁打ち） ----
+let chatSending = null; // 送信中の自分の発言
+const QUICK = ['今の自分の課題は？', '大会までにやるべきメニューは？', '目標タイムは現実的？', '後半に失速しないためには？'];
+function renderChat() {
+  const el = document.getElementById('chat');
+  const msgs = (R.chat || []).slice();
+  if (chatSending) msgs.push({ role: 'user', text: chatSending }, { role: 'assistant', text: '記録を見ながら考えています…', wait: true });
+  el.innerHTML = `<h2>コーチに相談${(R.chat || []).length ? '<button onclick="clearChat()">会話をリセット</button>' : ''}</h2>
+    <div class="sub" style="margin-top:4px">走行記録・自分のコメント・分析結果・大会目標・練習予定を踏まえて答えます。</div>
+    <div class="chatlog" id="chatlog">${msgs.length ? msgs.map(m => `<div class="msg ${m.role === 'user' ? 'me' : 'co'}${m.wait ? ' wait' : ''}">${esc(m.text).replace(/\n/g, '<br>')}${m.at ? `<small>${esc(m.at)}</small>` : ''}</div>`).join('')
+      : '<div class="sub" style="padding:10px 0">例えばこんなことが聞けます</div>'}</div>
+    <div class="quick">${QUICK.map(q => `<button onclick="sendChat('${q}')" ${chatSending ? 'disabled' : ''}>${q}</button>`).join('')}</div>
+    <div class="chatin"><textarea id="chat-in" rows="2" placeholder="相談したいことを書く（例：インターバルがきつくて最後まで走れない）"></textarea>
+      <button onclick="sendChat()" ${chatSending ? 'disabled' : ''}>${chatSending ? '…' : '送信'}</button></div>
+    <div class="err" id="chat-err"></div>
+    ${(R.chat || []).length ? '<button class="btn-soft" onclick="planFromChat()">この相談を踏まえて予定を組み直す</button>' : ''}`;
+  const log = document.getElementById('chatlog'); log.scrollTop = log.scrollHeight;
+}
+
+async function sendChat(text) {
+  const inp = document.getElementById('chat-in');
+  text = (text || inp.value).trim();
+  if (!text || chatSending) return;
+  chatSending = text; renderChat();
+  try { const d = await call('coachChat', text); chatSending = null; load(d); }
+  catch (e) { chatSending = null; renderChat(); document.getElementById('chat-in').value = text; document.getElementById('chat-err').textContent = e.message || e; }
+}
+
+async function clearChat() {
+  if (!confirm('コーチとの会話をすべて消しますか？')) return;
+  try { load(await call('clearChat')); } catch (e) { alert(e.message || e); }
+}
+
+// 相談内容を踏まえて練習予定を作り直す（サーバー側で直近の会話も渡している）
+async function planFromChat() {
+  const r = document.getElementById('replan'); if (r) r.style.display = 'block';
+  document.getElementById('plan').scrollIntoView({ behavior: 'smooth' });
+  await makePlan();
 }
 
 // ---- 走行記録 ----
