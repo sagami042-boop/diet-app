@@ -12,9 +12,9 @@
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>const APP_VERSION = '20261016152454';</script>
-<script src="nav.js?v=20261016152454"></script>
-<script src="api.js?v=20261016152454"></script>
+<script>const APP_VERSION = '20261016154858';</script>
+<script src="nav.js?v=20261016154858"></script>
+<script src="api.js?v=20261016154858"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -80,7 +80,33 @@
   .edit-run label { font-size: 11px; color: var(--sub); display: block; margin-bottom: 2px; }
   .edit-run input { padding: 8px 6px; }
   .empty { color: var(--sub); text-align: center; padding: 18px 0; font-size: 14px; }
+  .rl { cursor: pointer; }
+  .rl .ic { font-size: 11px; color: var(--accent); font-weight: 600; margin-left: 4px; }
+  .modal { position: fixed; inset: 0; background: rgba(30,18,10,0.35); display: none; align-items: flex-end; z-index: 20; }
+  .modal.open { display: flex; }
+  .modal .box { background: var(--bg); width: 100%; max-width: 640px; margin: 0 auto; border-radius: 24px 24px 0 0; padding: 16px 18px calc(20px + env(safe-area-inset-bottom)); max-height: 92vh; overflow-y: auto; }
+  .modal h2 { font-size: 18px; margin: 0; display: flex; justify-content: space-between; align-items: center; }
+  .modal h2 button { font-size: 13px; font-weight: 400; background: var(--card); border-radius: 99px; padding: 6px 12px; }
+  .mets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .met { background: var(--card); border-radius: 14px; padding: 10px; }
+  .met span { font-size: 11px; color: var(--sub); }
+  .met b { display: block; font-size: 18px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .sec { background: var(--card); border-radius: 16px; padding: 12px 14px; margin-top: 10px; }
+  .sec h3 { font-size: 14px; margin: 0 0 8px; }
+  .sp { display: grid; grid-template-columns: 38px 56px 1fr 46px; gap: 8px; align-items: center; font-size: 13px; padding: 3px 0; font-variant-numeric: tabular-nums; }
+  .sp .bar { height: 10px; border-radius: 5px; }
+  .sp .el { text-align: right; color: var(--sub); font-size: 12px; }
+  textarea { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; min-height: 90px; outline: none; resize: vertical; }
+  textarea:focus { border-color: var(--accent); }
+  .ana { font-size: 14px; line-height: 1.6; }
+  .ana p { margin: 0 0 6px; }
+  .ana ul { list-style: none; padding: 0; margin: 4px 0 8px; }
+  .ana li { display: flex; gap: 6px; margin: 3px 0; }
+  .ana li span { flex: none; font-weight: 700; }
+  .ana h4 { font-size: 12px; color: var(--sub); margin: 8px 0 0; font-weight: 600; }
   @media (min-width: 900px) {
+    .modal { align-items: center; }
+    .modal .box { border-radius: 24px; }
     .wrap { padding: 24px 32px 40px; }
     .cols { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
     .cols .card:first-child { margin-top: 12px; }
@@ -96,6 +122,8 @@
     <div><div id="runs" class="card"></div></div>
   </div>
 </div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeRun()"><div class="box" id="mbox"></div></div>
 
 <script>
 let R = null, chart = null, goalEdit = false, adding = null; // adding: 追加前の確認中の記録
@@ -208,9 +236,9 @@ function renderRuns() {
     <div class="chart"><canvas id="wk"></canvas></div>
     <div class="adds"><button class="main" onclick="pickShots()">NRCのスクショから追加</button><button onclick="manualRun()">手入力</button></div>
     <div id="adding"></div>
-    <div style="margin-top:6px">${runs.length ? [...runs].reverse().slice(0, 40).map(r => `<div class="rl">
+    <div style="margin-top:6px">${runs.length ? [...runs].reverse().slice(0, 40).map(r => `<div class="rl" onclick="if(!event.target.closest('.x'))openRun('${esc(r.id)}')">
       <span class="sub">${md(r.date)}（${wd(r.date)}）</span>
-      <span><span class="km">${r.km}km</span> <span class="sub">${r.sec ? hms(r.sec) : ''}</span></span>
+      <span><span class="km">${r.km}km</span> <span class="sub">${r.sec ? hms(r.sec) : ''}</span>${r.memo ? '<span class="ic">メモ</span>' : ''}${r.analysis ? '<span class="ic">分析済</span>' : ''}</span>
       <span class="sub">${pace(r.sec, r.km)}${r.hr ? ` ・ ♥${r.hr}` : ''}</span>
       <button class="x" onclick="delRun('${esc(r.id)}')" aria-label="削除">×</button></div>`).join('') : '<div class="empty">まだ記録がありません</div>'}</div>`;
   renderAdding();
@@ -222,6 +250,61 @@ function renderRuns() {
     options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: i => `${i.raw}km` } } },
       scales: { x: { grid: { display: false }, ticks: { color: css('--sub'), maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } }, y: { beginAtZero: true, grid: { color: css('--line') }, ticks: { color: css('--sub') } } } },
   });
+}
+
+// ---- 1回の走行の詳細：全項目・スプリット・自分のコメント・トレーナーの分析 ----
+let openId = null, analyzing = false;
+function openRun(id) { openId = id; renderRun(); document.getElementById('modal').classList.add('open'); }
+function closeRun() { openId = null; document.getElementById('modal').classList.remove('open'); }
+
+function renderRun() {
+  const r = R.runs.find(x => x.id === openId); if (!r) return closeRun();
+  const d = r.detail || {}, sp = (d.splits || []).filter(x => x.pace > 0);
+  const met = (l, v) => v ? `<div class="met"><span>${l}</span><b>${v}</b></div>` : '';
+  const avgP = r.sec && r.km ? r.sec / r.km : 0;
+  const lo = sp.length ? Math.min(...sp.map(x => x.pace)) : 0, hi = sp.length ? Math.max(...sp.map(x => x.pace)) : 0;
+  const memo = document.getElementById('run-memo')?.value;
+  const a = r.analysis;
+  const li = (arr, mark, col) => (arr || []).map(x => `<li><span style="color:var(${col})">${mark}</span>${esc(x)}</li>`).join('');
+  document.getElementById('mbox').innerHTML = `
+    <h2>${md(r.date)}（${wd(r.date)}）${d.start ? ` <span class="sub" style="font-weight:400">${esc(d.start)}〜</span>` : ''}<button onclick="closeRun()">閉じる</button></h2>
+    <div class="mets">
+      ${met('距離', r.km + 'km')}${met('ランニング時間', r.sec ? hms(r.sec) : '')}${met('平均ペース', avgP ? hms(avgP) + '/km' : '')}
+      ${met('経過時間', d.elapsed ? hms(d.elapsed) : '')}${met('最速ペース', d.best ? hms(d.best) + '/km' : '')}${met('推定消費', d.kcal ? d.kcal + 'kcal' : '')}
+      ${met('平均テンポ', d.cadence ? d.cadence + '歩/分' : '')}${met('高低差', d.up || d.down ? `+${d.up || 0} / -${d.down || 0}m` : '')}${met('心拍（平均/最大）', r.hr ? r.hr + (d.hrMax ? ' / ' + d.hrMax : '') : '')}
+    </div>
+    ${sp.length ? `<div class="sec"><h3>スプリット</h3>${sp.map(x => {
+      const w = hi > lo ? 35 + 65 * (hi - x.pace) / (hi - lo) : 80; // 速い区間ほど長い棒
+      const fast = avgP && x.pace < avgP;
+      return `<div class="sp"><span class="sub">${x.km}km</span><b>${hms(x.pace)}</b><div class="bar" style="width:${w}%;background:var(${fast ? '--accent' : '--track'})"></div><span class="el">${x.elev > 0 ? '+' : ''}${x.elev}m</span></div>`;
+    }).join('')}<div class="sub" style="margin-top:4px">棒が長いほど速い区間。オレンジは平均ペースより速かった区間</div></div>` : ''}
+    <div class="sec"><h3>自分のコメント（感想・反省・体調など）</h3>
+      <textarea id="run-memo" placeholder="例：後半きつかった。昼食から時間が空いていて空腹気味。右膝に少し違和感">${esc(memo != null ? memo : r.memo)}</textarea>
+      <button class="btn-soft" onclick="saveMemo()">コメントを保存</button>
+    </div>
+    <div class="sec"><h3>トレーナーの分析${a ? ` <span class="sub" style="font-weight:400">${esc(a.at || '')}</span>` : ''}</h3>
+      ${analyzing ? '<div class="sub" style="padding:10px 0">走りを分析しています…（20〜30秒）</div>' : a ? `<div class="ana">
+        <p><b>${esc(a.summary)}</b></p>
+        ${a.good && a.good.length ? `<h4>よかった点</h4><ul>${li(a.good, '○', '--ok')}</ul>` : ''}
+        ${a.lacking && a.lacking.length ? `<h4>足りていない点</h4><ul>${li(a.lacking, '△', '--accent')}</ul>` : ''}
+        ${a.todo && a.todo.length ? `<h4>どうすればいいか</h4><ul>${li(a.todo, '→', '--p')}</ul>` : ''}
+        <p class="summary"><b>次の練習：</b>${esc(a.next)}</p></div>` : '<div class="sub">数値・スプリット・コメント・練習予定・大会目標をもとに、足りない点と改善策を教えてくれます。コメントを書いてから頼むと、より具体的になります。</div>'}
+      <div class="err" id="ana-err"></div>
+      ${analyzing ? '' : `<button class="btn-main" onclick="analyzeRun()">${a ? 'コメントを踏まえてもう一度分析' : 'トレーナーに分析してもらう'}</button>`}
+    </div>`;
+}
+
+async function saveMemo() {
+  const memo = document.getElementById('run-memo').value;
+  try { load(await call('updateRun', openId, { memo })); renderRun(); } catch (e) { alert(e.message || e); }
+}
+
+async function analyzeRun() {
+  const memo = document.getElementById('run-memo').value, id = openId;
+  analyzing = true; renderRun();
+  try { load(await call('analyzeRun', id, memo)); }
+  catch (e) { analyzing = false; renderRun(); document.getElementById('ana-err').textContent = e.message || e; return; }
+  analyzing = false; if (openId === id) renderRun();
 }
 
 // 追加前の確認（スクショ読み取り結果・手入力）
