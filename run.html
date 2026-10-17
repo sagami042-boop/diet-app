@@ -12,9 +12,9 @@
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>const APP_VERSION = '20261016224446';</script>
-<script src="nav.js?v=20261016224446"></script>
-<script src="api.js?v=20261016224446"></script>
+<script>const APP_VERSION = '20261017113832';</script>
+<script src="nav.js?v=20261017113832"></script>
+<script src="api.js?v=20261017113832"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -93,6 +93,8 @@
   .th-l { font-size: 13px; line-height: 1.6; margin-top: 6px; }
   .th-l span { font-size: 11px; font-weight: 700; color: var(--accent); }
   .th-l.ok span { color: var(--ok); }
+  .th-l.q span { color: var(--p); }
+  .th-l .qq { white-space: pre-wrap; }
   .quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
   .quick button { font-size: 12px; background: var(--bg); color: var(--text); border-radius: 99px; padding: 6px 10px; }
   .chatin { display: flex; gap: 8px; margin-top: 10px; align-items: flex-end; }
@@ -286,9 +288,10 @@ function threadsHtml() {
   if (!th.length) return '';
   const range = t => t.start && t.end && t.start !== t.end ? `${md(t.start)}〜${md(t.end)}` : t.start ? md(t.start) : '';
   return `<h2 style="margin-top:18px">相談の履歴（成長ログ）</h2>
-    <div class="sub" style="margin-top:4px">新しい順。タップすると当時の会話を読み返せます</div>
+    <div class="sub" style="margin-top:4px">新しい順。会話は全文そのまま保存されていて、タップすると当時のやりとりを読み返せます</div>
     ${th.map(t => `<button class="thr" onclick="openThread('${esc(t.id)}')">
       <div class="th-h"><b>${esc(t.title)}</b><span class="sub">${range(t)}・${t.n}件</span></div>
+      ${(t.questions || []).length ? `<div class="th-l q"><span>聞いたこと</span>${t.questions.map(x => `<div class="qq">「${esc(x)}」</div>`).join('')}</div>` : ''}
       ${t.issues.length ? `<div class="th-l"><span>課題</span>${t.issues.map(x => `<div>・${esc(x)}</div>`).join('')}</div>` : ''}
       ${t.decisions.length ? `<div class="th-l ok"><span>決めたこと</span>${t.decisions.map(x => `<div>・${esc(x)}</div>`).join('')}</div>` : ''}
     </button>`).join('')}`;
