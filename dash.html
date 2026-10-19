@@ -8,25 +8,25 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="体型管理">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#fff6f0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e161d" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261019145040';</script>
-<script src="nav.js?v=20261019145040"></script>
-<script src="api.js?v=20261019145040"></script>
+<script>const APP_VERSION = '20261019145752';</script>
+<script src="nav.js?v=20261019145752"></script>
+<script src="api.js?v=20261019145752"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --muted: #c4a896; --line: #f3e4d8;
-    --accent: #ff7a3d; --accent-soft: rgba(255,122,61,0.35); --btn: #f6e3d6;
-    --danger: #d64545; --p: #2a62c9; --p-bg: #e8f1ff; --f: #b97500; --f-bg: #fff0d6; --c: #14895c; --c-bg: #e0f6ec;
+    --bg: #f3f6f9; --card: #ffffff; --text: #18242f; --sub: #6a7b89; --muted: #a9b7c3; --line: #e1e8ee;
+    --accent: #1D90CC; --accent-soft: rgba(29,144,204,0.35); --btn: #e4ecf2;
+    --danger: #CC1D29; --ok: #14895c; --ok-bg: #e1f3ea; --p: #1D90CC; --p-bg: #e2f1fa; --f: #8d8914; --f-bg: #f6f5d8; --c: #CC1D29; --c-bg: #fae3e4;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #1a1410; --card: #261e18; --text: #f7ece4; --sub: #b59a87; --muted: #6e5a4c; --line: #3a2e25;
-      --accent: #ff8a52; --accent-soft: rgba(255,138,82,0.4); --btn: #3a2b20;
-      --danger: #ff7b7b; --p: #8db4ff; --p-bg: #1f2b44; --f: #f2b851; --f-bg: #3d2e12; --c: #5fd0a0; --c-bg: #16362a;
+      --bg: #0e161d; --card: #17222c; --text: #e6edf2; --sub: #8ea0ae; --muted: #4c5c69; --line: #26333e;
+      --accent: #3aa6de; --accent-soft: rgba(58,166,222,0.4); --btn: #22303b;
+      --danger: #e8545e; --ok: #5fd0a0; --ok-bg: #16362a; --p: #4fb0e3; --p-bg: #133248; --f: #d9d35a; --f-bg: #33321a; --c: #e8545e; --c-bg: #3a1a1e;
     }
   }
   * { box-sizing: border-box; }
@@ -229,7 +229,7 @@ function render() {
     </div>
     <div class="card" style="margin-top:12px"><h2>カロリー収支</h2><div class="cap">摂取 − 消費（目安）。下に伸びる緑＝赤字（減る方向）、上に伸びる赤＝黒字（増える方向）。脂肪1kg ≒ 7,200kcalで換算${S.some(d => d.burn.rough) ? '。身長・年齢・性別が未設定のため消費は仮の値' : ''}</div>
       <div class="kpis" style="margin-top:6px">
-        <div class="kpi" style="background:var(--bg)"><div class="l">平均収支 / 日</div><div class="v" style="color:${balAvg < 0 ? 'var(--c)' : 'var(--danger)'}">${balAvg == null ? '–' : (balAvg < 0 ? '−' : '+') + fmt(Math.abs(balAvg))}<small> kcal</small></div><div class="d">${balAvg == null ? '&nbsp;' : `脂肪 約${balAvg < 0 ? '−' : '+'}${fmt(Math.abs(balAvg) / 7.2)}g／日（${balDays.length}日）`}</div></div>
+        <div class="kpi" style="background:var(--bg)"><div class="l">平均収支 / 日</div><div class="v" style="color:${balAvg < 0 ? 'var(--ok)' : 'var(--danger)'}">${balAvg == null ? '–' : (balAvg < 0 ? '−' : '+') + fmt(Math.abs(balAvg))}<small> kcal</small></div><div class="d">${balAvg == null ? '&nbsp;' : `脂肪 約${balAvg < 0 ? '−' : '+'}${fmt(Math.abs(balAvg) / 7.2)}g／日（${balDays.length}日）`}</div></div>
         <div class="kpi" style="background:var(--bg)"><div class="l">期間の合計</div><div class="v">${balSum == null ? '–' : (balSum < 0 ? '−' : '+') + fmt(Math.abs(balSum))}<small> kcal</small></div><div class="d">${balSum == null ? '&nbsp;' : `脂肪 約${balSum < 0 ? '−' : '+'}${fmt(Math.abs(balSum) / 7200, 2)}kg`}</div></div>
         <div class="kpi" style="background:var(--bg)"><div class="l">平均歩数</div><div class="v">${fmt(stepAvg)}<small> 歩</small></div><div class="d">入力した${stepDays.length}日</div></div>
         <div class="kpi" style="background:var(--bg)"><div class="l">ランニング合計</div><div class="v">${fmt(runKm, 1)}<small> km</small></div><div class="d">${runDays}回</div></div>
@@ -291,7 +291,7 @@ function render() {
   charts.push(new Chart(document.getElementById('cb'), {
     data: { labels, datasets: [
       { type: 'bar', label: '収支', data: B.map(b => b.bal == null ? null : Math.round(b.bal)),
-        backgroundColor: B.map(b => b.bal != null && b.bal > 0 ? css('--danger') : css('--c')), borderRadius: 4, maxBarThickness: G === 'day' ? 18 : 36 },
+        backgroundColor: B.map(b => b.bal != null && b.bal > 0 ? css('--danger') : css('--ok')), borderRadius: 4, maxBarThickness: G === 'day' ? 18 : 36 },
     ] },
     options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false }, tooltip: { ...tip, callbacks: { label: i => i.raw == null ? null : [`収支 ${i.raw > 0 ? '+' : ''}${fmt(i.raw)}kcal`, `脂肪 約${i.raw > 0 ? '+' : '−'}${fatTxt(i.raw)}`].concat(G === 'day' ? [] : [`（記録${B[i.dataIndex].n}日）`]) } } },

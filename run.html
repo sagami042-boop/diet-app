@@ -7,25 +7,25 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="体型管理">
-<meta name="theme-color" content="#fff6f0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e161d" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>const APP_VERSION = '20261019145040';</script>
-<script src="nav.js?v=20261019145040"></script>
-<script src="api.js?v=20261019145040"></script>
+<script>const APP_VERSION = '20261019145752';</script>
+<script src="nav.js?v=20261019145752"></script>
+<script src="api.js?v=20261019145752"></script>
 <style>
   :root {
-    --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
-    --accent: #ff7a3d; --accent-soft: #ffe8da; --on-accent: #ffffff; --danger: #d64545; --ok: #14895c;
-    --p: #2a62c9; --p-bg: #e8f1ff; --f: #b97500; --f-bg: #fff0d6; --c: #14895c; --c-bg: #e0f6ec;
+    --bg: #f3f6f9; --card: #ffffff; --text: #18242f; --sub: #6a7b89; --line: #e1e8ee; --track: #e4ecf2;
+    --accent: #1D90CC; --accent-soft: #e2f1fa; --on-accent: #ffffff; --danger: #CC1D29; --ok: #14895c; --ok-bg: #e1f3ea;
+    --p: #1D90CC; --p-bg: #e2f1fa; --f: #8d8914; --f-bg: #f6f5d8; --c: #CC1D29; --c-bg: #fae3e4;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #1a1410; --card: #261e18; --text: #f7ece4; --sub: #b59a87; --line: #3a2e25; --track: #3a2b20;
-      --accent: #ff8a52; --accent-soft: #4a2c1c; --on-accent: #1a1410; --danger: #ff7b7b; --ok: #5fd0a0;
-      --p: #8db4ff; --p-bg: #1f2b44; --f: #f2b851; --f-bg: #3d2e12; --c: #5fd0a0; --c-bg: #16362a;
+      --bg: #0e161d; --card: #17222c; --text: #e6edf2; --sub: #8ea0ae; --line: #26333e; --track: #22303b;
+      --accent: #3aa6de; --accent-soft: #133248; --on-accent: #0e161d; --danger: #e8545e; --ok: #5fd0a0; --ok-bg: #16362a;
+      --p: #4fb0e3; --p-bg: #133248; --f: #d9d35a; --f-bg: #33321a; --c: #e8545e; --c-bg: #3a1a1e;
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -113,7 +113,7 @@
   .seg2 button.on { background: var(--accent); color: var(--on-accent); font-weight: 700; }
   .edit-run select, .edit-run div input[id^="a-race"] { padding: 8px 10px; }
   .rl .ic { font-size: 11px; color: var(--accent); font-weight: 600; margin-left: 4px; }
-  .modal { position: fixed; inset: 0; background: rgba(30,18,10,0.35); display: none; align-items: flex-end; z-index: 20; }
+  .modal { position: fixed; inset: 0; background: rgba(10,20,30,0.35); display: none; align-items: flex-end; z-index: 20; }
   .modal.open { display: flex; }
   .modal .box { background: var(--bg); width: 100%; max-width: 640px; margin: 0 auto; border-radius: 24px 24px 0 0; padding: 16px 18px calc(20px + env(safe-area-inset-bottom)); max-height: 92vh; overflow-y: auto; }
   .modal h2 { font-size: 18px; margin: 0; display: flex; justify-content: space-between; align-items: center; }
@@ -168,7 +168,7 @@ const hms = sec => { sec = Math.round(sec); const h = Math.floor(sec / 3600), m 
 const pace = (sec, km) => sec && km ? hms(sec / km) + '/km' : '–';
 // 「52:30」「1:05:20」「52」（分）を秒に
 const toSec = t => { t = String(t || '').trim(); if (!t) return 0; const p = t.split(':').map(Number); if (p.some(isNaN)) return 0; return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p.length === 2 ? p[0] * 60 + p[1] : p[0] * 60; };
-const TYPE = { 'イージー': ['--c-bg', '--c'], 'ペース走': ['--f-bg', '--f'], 'インターバル': ['--accent-soft', '--accent'], 'ロング走': ['--p-bg', '--p'], 'レース': ['--accent', '--on-accent'], '休養': ['--bg', '--sub'] };
+const TYPE = { 'イージー': ['--ok-bg', '--ok'], 'ペース走': ['--f-bg', '--f'], 'インターバル': ['--accent-soft', '--accent'], 'ロング走': ['--p-bg', '--p'], 'レース': ['--accent', '--on-accent'], '休養': ['--bg', '--sub'] };
 const tag = t => { const [b, c] = TYPE[t] || ['--bg', '--sub']; return `<span class="tag" style="background:var(${b});color:var(${c})">${esc(t)}</span>`; };
 
 function load(d) { R = d; cacheSet('run', d); render(); }
