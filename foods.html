@@ -14,17 +14,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<script>const APP_VERSION = '20261019150331';</script>
-<script src="nav.js?v=20261019150331"></script>
-<script src="api.js?v=20261019150331"></script>
+<script>const APP_VERSION = '20261019151137';</script>
+<script src="nav.js?v=20261019151137"></script>
+<script src="api.js?v=20261019151137"></script>
 <style>
   :root {
+    --shadow: 0 1px 2px rgba(16,40,64,0.05), 0 6px 18px rgba(16,40,64,0.07); --shadow-lg: 0 10px 34px rgba(16,40,64,0.16);
     --bg: #f3f6f9; --card: #ffffff; --text: #18242f; --sub: #6a7b89; --line: #e1e8ee;
     --accent: #1D90CC; --accent-soft: #e2f1fa; --on-accent: #ffffff; --danger: #CC1D29; --ok: #14895c; --ok-bg: #e1f3ea;
     --p: #1D90CC; --p-bg: #e2f1fa; --f: #8d8914; --f-bg: #f6f5d8; --c: #CC1D29; --c-bg: #fae3e4;
   }
   @media (prefers-color-scheme: dark) {
     :root {
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 18px rgba(0,0,0,0.3); --shadow-lg: 0 10px 34px rgba(0,0,0,0.5);
       --bg: #0e161d; --card: #17222c; --text: #e6edf2; --sub: #8ea0ae; --line: #26333e;
       --accent: #3aa6de; --accent-soft: #133248; --on-accent: #0e161d; --danger: #e8545e; --ok: #5fd0a0; --ok-bg: #16362a;
       --p: #4fb0e3; --p-bg: #133248; --f: #d9d35a; --f-bg: #33321a; --c: #e8545e; --c-bg: #3a1a1e;
@@ -88,6 +90,8 @@
     .panel .ed { border-radius: 18px; max-height: none; }
     .ed .close { display: none; }
   }
+  .list, .ed { box-shadow: var(--shadow); }
+  .panel .ed { box-shadow: var(--shadow-lg); }
 </style>
 </head>
 <body>
