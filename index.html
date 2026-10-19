@@ -12,9 +12,9 @@
 <meta name="theme-color" content="#1a1410" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
-<script>const APP_VERSION = '20261017113832';</script>
-<script src="nav.js?v=20261017113832"></script>
-<script src="api.js?v=20261017113832"></script>
+<script>const APP_VERSION = '20261019145040';</script>
+<script src="nav.js?v=20261019145040"></script>
+<script src="api.js?v=20261019145040"></script>
 <style>
   :root {
     --bg: #fff6f0; --card: #ffffff; --text: #2b1d14; --sub: #9a7a66; --line: #f3e4d8; --track: #f6e3d6;
@@ -84,6 +84,7 @@
   .cur > div { flex: 1; min-width: 0; }
   .cur b { display: block; font-size: 15px; }
   .layout { display: block; }
+  .copy-prev { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 6px 14px; }
   .tapq { cursor: pointer; text-decoration: underline dotted var(--sub); text-underline-offset: 3px; }
   .qty-box { background: var(--card); border-radius: 14px; padding: 4px 12px 10px; margin-top: 10px; }
   .qchips { display: flex; gap: 6px; align-items: center; }
@@ -242,6 +243,22 @@ function totals() {
 
 function touch() { S.dirty = true; render(); scheduleSave(); }
 
+// 前日（記録のある直近の日）の食事を、押したときだけコピーする
+async function copyPrev() {
+  const btn = document.querySelector('.copy-prev'); if (btn) { btn.textContent = '読み込み中…'; btn.disabled = true; }
+  try {
+    let d = null;
+    for (let i = 1; i <= 7 && !(d && d.items.length); i++) { // 記録のある日まで最大1週間さかのぼる
+      const date = shift(S.date, -i);
+      d = cacheGet('day:' + date) || await call('getDay', date);
+      if (d && d.items.length) cacheSet('day:' + date, d);
+    }
+    if (!d || !d.items.length) { alert('直近1週間に食事の記録がありません'); render(); return; }
+    S.items = d.items.map(i => ({ ...i }));
+    touch();
+  } catch (e) { alert('読み込めませんでした: ' + (e.message || e)); render(); }
+}
+
 // ---- 自動保存：変更が止まって1.2秒たったら裏で保存する ----
 let autoTimer = null;
 function scheduleSave() { clearTimeout(autoTimer); autoTimer = setTimeout(save, 1200); }
@@ -335,7 +352,8 @@ function render() {
   const t = totals(), c = S.conf, day = S.day, isToday = S.date === today();
   const d = new Date(S.date + 'T00:00:00');
   const [stCls, stText] = statusInfo();
-  const status = `<div class="status ${stCls}">${stText}</div>`;
+  const status = `<div class="status ${stCls}">${stText}</div>` +
+    (!S.items.length && !S.dirty && !S.sending ? `<button class="copy-prev" onclick="copyPrev()">前日と同じ内容を入れる</button>` : '');
   const left = c.kcal - t.kcal;
 
   let html = `
