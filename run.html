@@ -11,10 +11,13 @@
 <meta name="theme-color" content="#0e161d" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>const APP_VERSION = '20261019145752';</script>
-<script src="nav.js?v=20261019145752"></script>
-<script src="api.js?v=20261019145752"></script>
+<script>const APP_VERSION = '20261019150331';</script>
+<script src="nav.js?v=20261019150331"></script>
+<script src="api.js?v=20261019150331"></script>
 <style>
   :root {
     --bg: #f3f6f9; --card: #ffffff; --text: #18242f; --sub: #6a7b89; --line: #e1e8ee; --track: #e4ecf2;
@@ -29,7 +32,7 @@
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Outfit", "Zen Kaku Gothic New", -apple-system, "Hiragino Sans", sans-serif; font-feature-settings: "palt"; font-size: 15px; -webkit-font-smoothing: antialiased; }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
   button:active { transform: scale(0.97); }
   input { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; outline: none; }
@@ -347,6 +350,7 @@ function renderRuns() {
   renderAdding();
   if (chart) chart.destroy();
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
   chart = new Chart(document.getElementById('wk'), {
     type: 'bar',
     data: { labels: weeks.map(k => md(k) + '〜'), datasets: [{ label: '距離', data: wkKm.map(x => Math.round(x * 10) / 10), backgroundColor: css('--accent'), borderRadius: 4, maxBarThickness: 26 }] },
