@@ -15,9 +15,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<script>const APP_VERSION = '20261019152038';</script>
-<script src="nav.js?v=20261019152038"></script>
-<script src="api.js?v=20261019152038"></script>
+<script>const APP_VERSION = '20261019152733';</script>
+<script src="nav.js?v=20261019152733"></script>
+<script src="api.js?v=20261019152733"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
@@ -81,6 +81,15 @@
     .chart { height: 220px; }
     .card { padding: 14px; border-radius: 18px; }
   }
+  .fc-main { margin-top: 8px; }
+  .fc-main b { display: block; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--accent); }
+  .fc-main b.flat { font-size: 20px; color: var(--sub); }
+  .fc-main span { font-size: 13px; color: var(--sub); }
+  .fc-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 10px; }
+  .fc-rows > div { background: var(--bg); border-radius: 12px; padding: 8px 10px; }
+  .fc-rows span { display: block; font-size: 11px; color: var(--sub); }
+  .fc-rows b { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .fc-rows b.good { color: var(--ok); } .fc-rows b.bad { color: var(--danger); }
   .rv-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .rv-nav { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; }
   .rv-nav button { font: inherit; border: 0; background: var(--btn); color: var(--text); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; }
@@ -231,6 +240,48 @@ function maintenance() {
   return { ok: true, kcal: avg(eaten.map(d => d.kcal)) - slope * 7200, perWeek: slope * 7 };
 }
 
+// ---- 目標体重の到達予測 ----
+// 直近4週間の体重から1日あたりの傾き（回帰直線）を出し、そのペースが続いた場合に目標に届く日を予測する
+function forecast(c, cur) {
+  const today = new Date(ymd(new Date()) + 'T00:00:00');
+  const from = ymd(new Date(today.getTime() - 27 * 864e5));
+  const ws = D.days.filter(d => d.weight != null && d.date >= from);
+  const span = ws.length ? (new Date(ws[ws.length - 1].date) - new Date(ws[0].date)) / 864e5 : 0;
+  if (ws.length < 5 || span < 7) return { ok: false, need: Math.max(0, 5 - ws.length), span };
+  const xs = ws.map(w => (new Date(w.date + 'T00:00:00') - today) / 864e5), ys = ws.map(w => w.weight);
+  const mx = avg(xs), my = avg(ys);
+  const slope = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / xs.reduce((s, x) => s + (x - mx) ** 2, 0);
+  cur = cur || ys[ys.length - 1];
+  const r = { ok: true, slope, perWeek: slope * 7, cur, n: ws.length };
+  if (c.weight && cur > c.weight && slope < -0.005) { // 週0.035kg以上減っているときだけ日付を出す
+    r.days = Math.ceil((cur - c.weight) / -slope);
+    const d = new Date(today.getTime() + r.days * 864e5);
+    r.date = ymd(d); r.dateLabel = `${d.getFullYear() !== today.getFullYear() ? d.getFullYear() + '年' : ''}${d.getMonth() + 1}月${d.getDate()}日`;
+  }
+  const g = D.goal || {};
+  if (g.date && g.date >= ymd(today)) {
+    const dr = (new Date(g.date + 'T00:00:00') - today) / 864e5;
+    r.race = { name: g.name, date: g.date, days: Math.round(dr), w: cur + slope * dr };
+  }
+  return r;
+}
+
+function forecastHtml(f, c) {
+  const head = '<h2>目標体重の到達予測</h2>';
+  if (!c.weight) return head + '<div class="cap">設定に目標体重がありません</div>';
+  if (!f.ok) return head + `<div class="cap" style="margin-top:6px">体重の記録が足りません。直近4週間で5回以上、1週間以上の期間にわたって測ると予測できます${f.need ? `（あと${f.need}回）` : ''}。</div>`;
+  const sign = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + fmt(Math.abs(n), 2);
+  const main = f.cur <= c.weight ? `<div class="fc-main"><b>目標達成中</b><span>7日平均が目標の${fmt(c.weight, 1)}kgを下回っています</span></div>`
+    : f.date ? `<div class="fc-main"><b>${f.dateLabel}ごろ</b><span>あと約${f.days}日（${fmt(f.cur - c.weight, 1)}kg）で ${fmt(c.weight, 1)}kg に届く見込み</span></div>`
+    : `<div class="fc-main"><b class="flat">今のペースでは届きません</b><span>直近4週間で体重が${f.perWeek >= 0 ? '増えている' : 'ほとんど減っていない'}ため、到達日を計算できません</span></div>`;
+  return head + main + `<div class="fc-rows">
+      <div><span>今の体重（7日平均）</span><b>${fmt(f.cur, 1)}kg</b></div>
+      <div><span>ペース（直近4週間）</span><b class="${f.perWeek < 0 ? 'good' : 'bad'}">${sign(f.perWeek)}kg/週</b></div>
+      ${f.race ? `<div><span>大会の日（${md(f.race.date)}）の予測</span><b>${fmt(f.race.w, 1)}kg</b></div>` : ''}
+    </div>
+    <div class="cap" style="margin-top:8px">直近4週間の${f.n}回の体重から計算。今のペースが続いた場合の目安です</div>`;
+}
+
 // ---- トレーナーの振り返り（週・月） ----
 function shiftPeriod(n) {
   const d = new Date(RV.start + 'T00:00:00');
@@ -298,6 +349,7 @@ function render() {
   const k7 = avg(last7.map(d => d.kcal));
   const m = maintenance();
   const toGoal = nowAvg && c.weight ? nowAvg.wAvg - c.weight : null;
+  const fc = forecast(c, nowAvg ? nowAvg.wAvg : null);
   if (window.setNavGoal) setNavGoal(`目標 <b>${fmt(c.weight, 1)}kg</b><br>7日平均 ${fmt(nowAvg && nowAvg.wAvg, 1)}kg${toGoal > 0 ? `（あと${fmt(toGoal, 1)}kg）` : ''}`);
   const balDays = S.filter(d => d.bal != null);
   const balAvg = avg(balDays.map(d => d.bal)), balSum = balDays.length ? balDays.reduce((x, d) => x + d.bal, 0) : null;
@@ -313,12 +365,13 @@ function render() {
       <div class="kpi"><div class="l">体重（7日平均）</div><div class="v">${fmt(nowAvg && nowAvg.wAvg, 1)}<small> kg</small></div>
         <div class="d">最新 ${lastW ? fmt(lastW.weight, 1) + 'kg（' + md(lastW.date) + '）' : '–'}</div></div>
       <div class="kpi"><div class="l">目標 ${fmt(c.weight, 1)}kg まで</div><div class="v">${toGoal == null ? '–' : toGoal <= 0 ? '達成' : fmt(toGoal, 1)}${toGoal > 0 ? '<small> kg</small>' : ''}</div>
-        <div class="d">${m.ok && m.perWeek < 0 && toGoal > 0 ? `今のペースで約${Math.ceil(toGoal / -m.perWeek)}週` : '&nbsp;'}</div></div>
+        <div class="d">${fc.ok && fc.date && toGoal > 0 ? `${fc.dateLabel}ごろ到達の予測` : '&nbsp;'}</div></div>
       <div class="kpi"><div class="l">摂取kcal（7日平均）</div><div class="v">${fmt(k7)}<small> / ${fmt(c.kcal)} kcal</small></div>
         <div class="d">${last7.length}日分の記録から</div></div>
       <div class="kpi"><div class="l">推定維持カロリー</div><div class="v">${m.ok ? fmt(Math.round(m.kcal / 10) * 10) + '<small> kcal</small>' : '–'}</div>
         <div class="d">${m.ok ? `体重 ${m.perWeek >= 0 ? '+' : ''}${fmt(m.perWeek, 2)}kg/週（直近28日）` : `あと${m.need}日分の記録で算出`}${m.ok ? `<br>計算上の消費 ${fmt(Math.round(burnAvg / 10) * 10)}kcal` : ''}</div></div>
     </div>
+    <div class="card fc" style="margin-top:12px">${forecastHtml(fc, c)}</div>
     <div class="card" style="margin-top:12px" id="review"></div>
     <div class="card" style="margin-top:12px"><h2>カロリー収支</h2><div class="cap">摂取 − 消費（目安）。下に伸びる緑＝赤字（減る方向）、上に伸びる赤＝黒字（増える方向）。脂肪1kg ≒ 7,200kcalで換算${S.some(d => d.burn.rough) ? '。身長・年齢・性別が未設定のため消費は仮の値' : ''}</div>
       <div class="kpis" style="margin-top:6px">
