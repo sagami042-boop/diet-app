@@ -1,4 +1,4 @@
-// PC（横幅900px以上）だけに出す左側のメニュー。スマホでは表示しない
+// PC（横幅900px以上）は左側のメニュー、スマホは画面下のアイコンメニュー
 (function () {
   const path = location.pathname;
   const page = path.endsWith('dash.html') ? 'dash' : path.endsWith('foods.html') ? 'foods' : path.endsWith('run.html') ? 'run' : 'log';
@@ -11,24 +11,15 @@
   ];
   const css = `
     .side-nav { display: none; }
-    /* スマホ：右上のハンバーガーボタンと、右から出るメニュー */
-    .nav-burger { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px;
-      background: var(--card); color: var(--text); flex: none; }
-    .m-nav { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
-    .m-nav .ov { position: absolute; inset: 0; background: rgba(8,14,20,0.4); opacity: 0; transition: opacity .2s; }
-    .m-nav .pn { position: absolute; top: 0; right: 0; bottom: 0; width: min(280px, 80vw); background: #14212c; color: #dbe5ec;
-      padding: calc(20px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom)); display: flex; flex-direction: column;
-      transform: translateX(100%); transition: transform .22s ease; }
-    .m-nav.open { pointer-events: auto; }
-    .m-nav.open .ov { opacity: 1; }
-    .m-nav.open .pn { transform: none; }
-    .m-nav .logo { font-size: 20px; font-weight: 700; color: #fff; padding: 0 10px; display: flex; align-items: center; gap: 10px; }
-    .m-nav .logo img { width: 28px; height: 28px; border-radius: 8px; }
-    .m-nav nav { margin-top: 22px; display: flex; flex-direction: column; gap: 4px; }
-    .m-nav a { display: flex; align-items: center; gap: 12px; padding: 13px 12px; border-radius: 10px; color: #dbe5ec; text-decoration: none; font-size: 16px; }
-    .m-nav a.on { background: rgba(255,255,255,0.11); color: #fff; font-weight: 600; }
-    .m-nav .foot { margin-top: auto; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.06); font-size: 12px; color: #8a9aa7; line-height: 1.6; }
-    .m-nav .foot b { color: #fff; font-size: 14px; }
+    /* スマホ：画面下に並べるアイコンのメニュー */
+    .tab-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; display: flex; background: var(--card); border-top: 1px solid var(--line);
+      padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+    .tab-bar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0; color: var(--sub);
+      text-decoration: none; font-size: 10.5px; font-weight: 500; }
+    .tab-bar a svg { width: 24px; height: 24px; }
+    .tab-bar a.on { color: var(--accent); font-weight: 700; }
+    body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+    .toast { bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
     @media (min-width: 900px) {
       body { padding-left: 232px; }
       .side-nav { display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; width: 232px; padding: 22px 14px;
@@ -42,7 +33,8 @@
       .side-nav a.on { background: rgba(255,255,255,0.11); color: #fff; font-weight: 600; }
       .side-nav .foot { margin-top: auto; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.06); font-size: 12px; color: #8a9aa7; line-height: 1.6; }
       .side-nav .foot b { color: #fff; font-size: 14px; }
-      .pc-hide, .nav-burger, .m-nav { display: none !important; }
+      body { padding-bottom: 0; }
+      .pc-hide, .tab-bar { display: none !important; }
     }`;
   const style = document.createElement('style');
   style.textContent = css;
@@ -52,22 +44,17 @@
   el.innerHTML = `<div class="logo"><img src="icon.png" alt="">体型管理<small>body</small></div>
     <nav>${items.map(([k, href, label, ic]) => `<a href="${href}" class="${k === page ? 'on' : ''}">${ic}${label}</a>`).join('')}</nav>
     <div class="foot" id="nav-goal"></div>`;
-  const links = items.map(([k, href, label, ic]) => `<a href="${href}" class="${k === page ? 'on' : ''}">${ic}${label}</a>`).join('');
-  const mob = document.createElement('div');
-  mob.className = 'm-nav';
-  mob.innerHTML = `<div class="ov" onclick="closeNav()"></div><div class="pn">
-    <div class="logo"><img src="icon.png" alt="">体型管理</div><nav>${links}</nav><div class="foot nav-goal"></div></div>`;
-  window.openNav = () => mob.classList.add('open');
-  window.closeNav = () => mob.classList.remove('open');
-  // 各ページのヘッダーに置くボタン
-  window.NAV_BURGER = `<button class="nav-burger" onclick="openNav()" aria-label="メニューを開く"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>`;
+  const bar = document.createElement('nav');
+  bar.className = 'tab-bar';
+  bar.innerHTML = items.map(([k, href, label, ic]) => `<a href="${href}" class="${k === page ? 'on' : ''}">${ic}${label}</a>`).join('');
+  window.NAV_BURGER = ''; // 以前の右上メニューボタン（下のメニューに置き換えたので空）
 
   // 画面側から目標などを表示してもらう（メニューを置く前に呼ばれても、置いた時点で反映する）
   let goal = '';
   const paint = () => document.querySelectorAll('#nav-goal, .nav-goal').forEach(g => { g.innerHTML = goal; });
   window.setNavGoal = html => { goal = html; paint(); };
   document.addEventListener('DOMContentLoaded', () => {
-    document.body.prepend(el); document.body.append(mob); paint();
-    document.querySelectorAll('[data-burger]').forEach(x => { x.outerHTML = NAV_BURGER; });
+    document.body.prepend(el); document.body.append(bar); paint();
+    document.querySelectorAll('[data-burger]').forEach(x => x.remove());
   });
 })();
