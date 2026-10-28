@@ -15,9 +15,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>const APP_VERSION = '20261019152733';</script>
-<script src="nav.js?v=20261019152733"></script>
-<script src="api.js?v=20261019152733"></script>
+<script>const APP_VERSION = '20261028170820';</script>
+<script src="nav.js?v=20261028170820"></script>
+<script src="fit.js?v=20261028170820"></script>
+<script src="api.js?v=20261028170820"></script>
 <style>
   :root {
     --shadow: 0 1px 2px rgba(16,40,64,0.05), 0 6px 18px rgba(16,40,64,0.07); --shadow-lg: 0 10px 34px rgba(16,40,64,0.16);
@@ -86,6 +87,15 @@
   .edit-run input { padding: 8px 6px; }
   .empty { color: var(--sub); text-align: center; padding: 18px 0; font-size: 14px; }
   .rl { cursor: pointer; }
+  .vd { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .vd > div { background: var(--bg); border-radius: 14px; padding: 10px 12px; }
+  .vd b { display: block; font-size: 30px; font-weight: 700; letter-spacing: -0.5px; }
+  .vd small { display: block; font-size: 11px; color: var(--sub); }
+  .pzs { margin-top: 10px; }
+  .pz { display: grid; grid-template-columns: 34px 110px 1fr; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+  .pz:first-child { border-top: 0; }
+  .pz .tag { text-align: center; margin: 0; }
+  .pz b { font-variant-numeric: tabular-nums; }
   .chatlog { margin-top: 10px; max-height: 440px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
   .msg { max-width: 88%; padding: 10px 12px; border-radius: 16px; font-size: 14px; line-height: 1.6; word-break: break-word; }
   .msg small { display: block; font-size: 10px; color: var(--sub); margin-top: 4px; }
@@ -129,7 +139,7 @@
   .met b { display: block; font-size: 18px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
   .sec { background: var(--card); border-radius: 16px; padding: 12px 14px; margin-top: 10px; }
   .sec h3 { font-size: 14px; margin: 0 0 8px; }
-  .sp { display: grid; grid-template-columns: 38px 56px 1fr 46px; gap: 8px; align-items: center; font-size: 13px; padding: 3px 0; font-variant-numeric: tabular-nums; }
+  .sp { display: grid; grid-template-columns: 38px 52px 1fr 44px 42px; gap: 8px; align-items: center; font-size: 13px; padding: 3px 0; font-variant-numeric: tabular-nums; }
   .sp .bar { height: 10px; border-radius: 5px; }
   .sp .el { text-align: right; color: var(--sub); font-size: 12px; }
   textarea { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; min-height: 90px; outline: none; resize: vertical; }
@@ -155,6 +165,7 @@
 <div class="wrap">
   <div class="top"><h1>ランニング</h1><span data-burger></span></div>
   <div id="goal" class="card"><div class="empty">読み込み中…</div></div>
+  <div id="vdot" class="card"></div>
   <div id="bests" class="card"></div>
   <div class="cols">
     <div><div id="plan" class="card"></div><div id="chat" class="card"></div></div>
@@ -175,13 +186,14 @@ const hms = sec => { sec = Math.round(sec); const h = Math.floor(sec / 3600), m 
 const pace = (sec, km) => sec && km ? hms(sec / km) + '/km' : '–';
 // 「52:30」「1:05:20」「52」（分）を秒に
 const toSec = t => { t = String(t || '').trim(); if (!t) return 0; const p = t.split(':').map(Number); if (p.some(isNaN)) return 0; return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p.length === 2 ? p[0] * 60 + p[1] : p[0] * 60; };
-const TYPE = { 'イージー': ['--ok-bg', '--ok'], 'ペース走': ['--f-bg', '--f'], 'インターバル': ['--accent-soft', '--accent'], 'ロング走': ['--p-bg', '--p'], 'レース': ['--accent', '--on-accent'], '休養': ['--bg', '--sub'] };
+const TYPE = { 'Eジョグ': ['--ok-bg', '--ok'], 'ロング走': ['--p-bg', '--p'], 'Mペース走': ['--f-bg', '--f'], 'Tペース走': ['--accent-soft', '--accent'], 'Iインターバル': ['--c-bg', '--c'], 'Rレペ': ['--c-bg', '--c'],
+  'イージー': ['--ok-bg', '--ok'], 'ペース走': ['--f-bg', '--f'], 'インターバル': ['--accent-soft', '--accent'], 'ロング走': ['--p-bg', '--p'], 'レース': ['--accent', '--on-accent'], '休養': ['--bg', '--sub'] };
 const tag = t => { const [b, c] = TYPE[t] || ['--bg', '--sub']; return `<span class="tag" style="background:var(${b});color:var(${c})">${esc(t)}</span>`; };
 
 function load(d) { R = d; cacheSet('run', d); render(); }
 
 function render() {
-  renderGoal(); renderBests(); renderPlan(); renderChat(); renderRuns();
+  renderGoal(); renderVdot(); renderBests(); renderPlan(); renderChat(); renderRuns();
   const g = R.goal;
   if (window.setNavGoal) setNavGoal(g.name && g.date ? `${esc(g.name)}<br>あと <b>${Math.max(0, Math.round((dt(g.date) - dt(R.today)) / 864e5))}</b> 日` : '大会の目標を登録しましょう');
 }
@@ -344,7 +356,8 @@ function renderRuns() {
       <div class="stat"><span class="sub">最長</span><b>${longest.toFixed(1)}<small> km</small></b></div>
     </div>
     <div class="chart"><canvas id="wk"></canvas></div>
-    <div class="adds"><button class="main" onclick="pickShots()">NRCのスクショから追加</button><button onclick="manualRun()">手入力</button></div>
+    <div class="adds"><button class="main" onclick="pickGarmin()">Garminのファイルから追加</button></div>
+    <div class="adds" style="margin-top:6px"><button onclick="pickShots()">スクショから追加</button><button onclick="manualRun()">手入力</button></div>
     <div id="adding"></div>
     <div style="margin-top:6px">${runs.length ? [...runs].reverse().slice(0, 40).map(r => `<div class="rl" onclick="if(!event.target.closest('.x'))openRun('${esc(r.id)}')">
       <span class="sub">${md(r.date)}（${wd(r.date)}）</span>
@@ -361,6 +374,27 @@ function renderRuns() {
     options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: i => `${i.raw}km` } } },
       scales: { x: { grid: { display: false }, ticks: { color: css('--sub'), maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } }, y: { beginAtZero: true, grid: { color: css('--line') }, ticks: { color: css('--sub') } } } },
   });
+}
+
+// ---- VDOT とトレーニングペース（ダニエルズのランニング・フォーミュラ） ----
+function renderVdot() {
+  const el = document.getElementById('vdot'), x = R.vdot;
+  if (!x || (!x.cur && !x.goal)) { el.innerHTML = '<h2>VDOT・トレーニングペース</h2><div class="sub" style="margin-top:6px">3km以上の走行記録が入ると、走力（VDOT）と練習のペースを計算します。</div>'; return; }
+  const p = x.paces, b = x.basis;
+  const row = (k, name, desc, v) => `<div class="pz"><span class="tag" style="background:var(${TYPE[name][0]});color:var(${TYPE[name][1]})">${k}</span><b>${v}</b><span class="sub">${desc}</span></div>`;
+  el.innerHTML = `<h2>VDOT・トレーニングペース</h2>
+    <div class="vd">
+      <div><span class="sub">今のVDOT</span><b>${x.cur ?? '–'}</b>${b ? `<small>${md(b.date)}の${b.km}km（${hms(b.sec)}）から${b.race ? '' : '・練習なので低めに出やすい'}</small>` : ''}</div>
+      <div><span class="sub">目標に必要なVDOT</span><b>${x.goal ?? '–'}</b>${x.goal && x.cur ? `<small>あと ${Math.max(0, Math.round((x.goal - x.cur) * 10) / 10)}</small>` : ''}</div>
+    </div>
+    ${p ? `<div class="pzs">
+      ${row('E', 'Eジョグ', 'イージー・会話できる。週の大半', `${hms(p.E[0])}〜${hms(p.E[1])}`)}
+      ${row('M', 'Mペース走', 'マラソンペース', hms(p.M))}
+      ${row('T', 'Tペース走', '閾値・快適にきつい。20分前後', hms(p.T))}
+      ${row('I', 'Iインターバル', '3〜5分×数本、同じ時間のジョグでつなぐ', hms(p.I))}
+      ${row('R', 'Rレペ', '200〜400m・休息たっぷり', hms(p.R))}
+    </div>
+    <div class="sub" style="margin-top:6px">ペースは1kmあたり。今のVDOTで計算しています。予想タイム：5km ${hms(x.predict['5km'])}・10km ${hms(x.predict['10km'])}・ハーフ ${hms(x.predict['ハーフ'])}・フル ${hms(x.predict['フル'])}</div>` : ''}`;
 }
 
 // ---- 距離別ベストと大会の参加履歴 ----
@@ -433,13 +467,15 @@ function renderRun() {
     <div class="mets">
       ${met('距離', r.km + 'km')}${met('ランニング時間', r.sec ? hms(r.sec) : '')}${met('平均ペース', avgP ? hms(avgP) + '/km' : '')}
       ${met('経過時間', d.elapsed ? hms(d.elapsed) : '')}${met('最速ペース', d.best ? hms(d.best) + '/km' : '')}${met('推定消費', d.kcal ? d.kcal + 'kcal' : '')}
-      ${met('平均テンポ', d.cadence ? d.cadence + '歩/分' : '')}${met('高低差', d.up || d.down ? `+${d.up || 0} / -${d.down || 0}m` : '')}${met('心拍（平均/最大）', r.hr ? r.hr + (d.hrMax ? ' / ' + d.hrMax : '') : '')}
+      ${met('ピッチ', d.cadence ? d.cadence + '歩/分' : '')}${met('高低差', d.up || d.down ? `+${d.up || 0} / -${d.down || 0}m` : '')}${met('心拍（平均/最大）', r.hr ? r.hr + (d.hrMax ? ' / ' + d.hrMax : '') : '')}
+      ${met('パワー（平均/NP）', d.power ? d.power + (d.np ? ' / ' + d.np : '') + 'W' : '')}${met('歩幅', d.stepLen ? d.stepLen + 'm' : '')}${met('上下動', d.vo ? d.vo + 'cm' + (d.vr ? `（${d.vr}%）` : '') : '')}
+      ${met('接地時間', d.gct ? d.gct + 'ms' : '')}${met('トレーニング効果', d.te ? `有酸素 ${d.te} / 無酸素 ${d.teAn ?? '–'}` : '')}${met('気温', d.temp != null ? d.temp + '℃' : '')}
     </div>
     ${sp.length ? `<div class="sec"><h3>スプリット</h3>${sp.map(x => {
       const w = hi > lo ? 35 + 65 * (hi - x.pace) / (hi - lo) : 80; // 速い区間ほど長い棒
       const fast = avgP && x.pace < avgP;
-      return `<div class="sp"><span class="sub">${x.km}km</span><b>${hms(x.pace)}</b><div class="bar" style="width:${w}%;background:var(${fast ? '--accent' : '--track'})"></div><span class="el">${x.elev > 0 ? '+' : ''}${x.elev}m</span></div>`;
-    }).join('')}<div class="sub" style="margin-top:4px">棒が長いほど速い区間。オレンジは平均ペースより速かった区間</div></div>` : ''}
+      return `<div class="sp"><span class="sub">${x.km}km</span><b>${hms(x.pace)}</b><div class="bar" style="width:${w}%;background:var(${fast ? '--accent' : '--track'})"></div><span class="el hr">${x.hr ? '♥' + x.hr : ''}</span><span class="el">${x.elev > 0 ? '+' : ''}${x.elev}m</span></div>`;
+    }).join('')}<div class="sub" style="margin-top:4px">棒が長いほど速い区間。青は平均ペースより速かった区間。♥は区間の平均心拍</div></div>` : ''}
     <div class="sec"><h3>区分</h3>
       <div class="seg2"><button class="${isRace(r) ? '' : 'on'}" onclick="setKind(false)">練習</button><button class="${isRace(r) ? 'on' : ''}" onclick="setKind(true)">レース（大会）</button></div>
       <input id="run-race" style="margin-top:8px;display:${isRace(r) ? 'block' : 'none'}" placeholder="大会名（例：湘南国際マラソン）" value="${esc(raceName(r))}">
@@ -519,6 +555,24 @@ function readAdding() {
   });
 }
 function manualRun() { adding = { list: [{ date: R.today, km: '', sec: 0, hr: null }] }; renderAdding(); }
+
+// Garmin の走行データ（.zip または .fit）を、このアプリの中で読み取る（AIは使わないので正確・無料）
+function pickGarmin() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.fit,.zip,application/zip,application/octet-stream'; inp.multiple = true;
+  inp.onchange = async () => {
+    const files = [...inp.files]; if (!files.length) return;
+    adding = { loading: `ファイル${files.length}件を読み取っています…` }; renderAdding();
+    const list = [], errs = [];
+    for (const f of files) {
+      try { list.push(...await readGarminFile(f)); } catch (e) { errs.push(`${f.name}：${e.message || e}`); }
+    }
+    adding = list.length ? { list, note: `Garminのファイルから${list.length}件を読み取りました。${errs.length ? '読めなかったファイル：' + errs.join('、') : ''}` }
+      : { list: [], note: errs.join('、') || '読み取れませんでした' };
+    renderAdding();
+  };
+  inp.click();
+}
 
 function pickShots() {
   const inp = document.createElement('input');
