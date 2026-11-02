@@ -15,9 +15,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<script>const APP_VERSION = '20261028205901';</script>
-<script src="nav.js?v=20261028205901"></script>
-<script src="api.js?v=20261028205901"></script>
+<script>const APP_VERSION = '20261102110159';</script>
+<script src="nav.js?v=20261102110159"></script>
+<script src="api.js?v=20261102110159"></script>
 <style>
   :root {
     --shadow: 0 1px 2px rgba(16,40,64,0.05), 0 6px 18px rgba(16,40,64,0.07); --shadow-lg: 0 10px 34px rgba(16,40,64,0.16);
@@ -121,9 +121,6 @@
     .layout { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 28px; align-items: start; }
     .main { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; align-items: start; }
     .main .card { margin-top: 0; }
-    .sheet-bg { align-items: center; }
-    .sheet { border-radius: 24px; max-width: 520px; }
-    .toast { bottom: 32px; }
   }
   .kc { min-width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
   .acts { display: flex; gap: 8px; margin-top: 10px; }
@@ -133,6 +130,10 @@
   .foot button.done { background: var(--card); color: var(--ok); }
   .sheet-bg { position: fixed; inset: 0; background: rgba(10,20,30,0.35); display: flex; align-items: flex-end; z-index: 10; }
   .sheet { background: var(--bg); width: 100%; max-width: 480px; margin: 0 auto; border-radius: 24px 24px 0 0; padding: 16px 18px calc(18px + env(safe-area-inset-bottom)); max-height: 85vh; overflow-y: auto; }
+  @media (min-width: 900px) { /* PCは画面の中央に出す */
+    .sheet-bg { align-items: center; }
+    .sheet { border-radius: 24px; max-width: 520px; padding-bottom: 18px; }
+  }
   .sheet h2 { font-size: 18px; font-weight: 700; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; }
   .sheet h2 button { font-size: 13px; font-weight: 400; background: var(--card); border-radius: 99px; padding: 6px 12px; }
   .list { background: var(--card); border-radius: 16px; margin-top: 10px; overflow: hidden; }

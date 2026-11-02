@@ -19,7 +19,7 @@
     .tab-bar a svg { width: 24px; height: 24px; }
     .tab-bar a.on { color: var(--accent); font-weight: 700; }
     body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-    .toast { bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
+    @media (max-width: 899px) { .toast { bottom: calc(80px + env(safe-area-inset-bottom)) !important; } }
     @media (min-width: 900px) {
       body { padding-left: 232px; }
       .side-nav { display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; width: 232px; padding: 22px 14px;
