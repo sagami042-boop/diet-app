@@ -15,9 +15,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<script>const APP_VERSION = '20261102110159';</script>
-<script src="nav.js?v=20261102110159"></script>
-<script src="api.js?v=20261102110159"></script>
+<script>const APP_VERSION = '20261102141356';</script>
+<script src="nav.js?v=20261102141356"></script>
+<script src="api.js?v=20261102141356"></script>
 <style>
   :root {
     --shadow: 0 1px 2px rgba(16,40,64,0.05), 0 6px 18px rgba(16,40,64,0.07); --shadow-lg: 0 10px 34px rgba(16,40,64,0.16);
@@ -40,6 +40,10 @@
   button:active { transform: scale(0.96); }
   input { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; width: 100%; outline: none; }
   input:focus { border-color: var(--accent); }
+  .note textarea { font: inherit; font-size: 14px; line-height: 1.6; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; width: 100%; min-height: 72px; resize: vertical; outline: none; box-sizing: border-box; margin-top: 10px; }
+  .note textarea:focus { border-color: var(--accent); }
+  .note .st { font-size: 12px; color: var(--sub); }
+  .note .st.ok { color: var(--ok); }
   .sub { font-size: 12px; color: var(--sub); }
   .top { display: flex; align-items: center; justify-content: space-between; }
   .top .nav { display: flex; align-items: center; gap: 2px; color: var(--sub); font-size: 13px; }
@@ -195,6 +199,7 @@ function loadDay(day) {
   S.items = day.items.map(i => ({ ...i }));
   S.weight = day.weight;
   S.act = { ...(day.act || { steps: 0, runKm: 0, runMin: 0, other: 0 }) };
+  S.note = day.note || ''; S.noteSt = '';
   S.dirty = false; S.failed = false; S.wTouched = false; S.aTouched = false;
   render();
 }
@@ -206,7 +211,8 @@ const sheetOpen = () => !!document.getElementById('sheet').innerHTML;
 function applyInit(d) {
   S.meals = d.meals; S.sets = d.sets; S.conf = d.conf; setFoods(d.foods); saveBase();
   cacheSet('day:' + d.day.date, d.day);
-  if (!S.day || (d.day.date === S.date && !S.dirty && !S.sending && !sheetOpen())) loadDay(d.day);
+  const typing = noteTimer || (document.activeElement && document.activeElement.id === 'note');
+  if (!S.day || (d.day.date === S.date && !S.dirty && !S.sending && !sheetOpen() && !typing)) loadDay(d.day);
 }
 
 async function init() {
@@ -227,7 +233,7 @@ function prefetch(date) {
 }
 
 async function go(n) {
-  flushSave(); // 移動する前に、まだ送っていない変更を保存
+  flushSave(); flushNote(); // 移動する前に、まだ送っていない変更を保存
   const date = shift(S.date, n);
   if (date > today()) return;
   const hit = cacheGet('day:' + date);
@@ -397,6 +403,10 @@ function render() {
       <div class="arow"><span>歩数</span>${numInput('steps', S.act.steps)}<span class="u">歩</span></div>
       <div class="arow"><span>ランニング</span><span class="sub" style="flex:none">${S.act.runKm ? `${S.act.runKm}km・${S.act.runMin || 0}分` : '記録なし'}</span><a href="run.html" style="font-size:13px;color:var(--accent);font-weight:600;text-decoration:none;flex:none">記録する ›</a></div>
       <div class="arow"><span>その他の運動</span>${numInput('other', S.act.other)}<span class="u">kcal</span></div>
+    </div>
+    <div class="card note">
+      <div class="meal-h"><b>ひとことメモ</b><span class="st" id="note-st">${S.noteSt === 'ok' ? '✓ 保存しました' : S.noteSt === 'saving' ? '保存中…' : S.noteSt === 'err' ? '保存できませんでした' : ''}</span></div>
+      <textarea id="note" placeholder="例：夜は飲み会。ビール3杯と焼き鳥など／寝不足で体が重い" oninput="setNote(this.value)" onblur="flushNote()">${esc(S.note || '')}</textarea>
     </div>`;
 
   let mealsHtml = '';
@@ -526,8 +536,33 @@ function coachHtml() {
     <button class="btn-soft" onclick="askCoach()">今の記録でもう一度聞く</button>`;
 }
 
+// ---- ひとことメモ（入力が止まって1秒後に自動保存） ----
+let noteTimer = null, notePending = null;
+function noteStatus(st) {
+  S.noteSt = st;
+  const el = document.getElementById('note-st');
+  if (el) { el.textContent = st === 'ok' ? '✓ 保存しました' : st === 'saving' ? '保存中…' : st === 'err' ? '保存できませんでした' : ''; el.className = 'st' + (st === 'ok' ? ' ok' : ''); }
+}
+function setNote(v) {
+  S.note = v; noteStatus('');
+  clearTimeout(noteTimer); noteTimer = setTimeout(flushNote, 1000);
+}
+function flushNote() {
+  clearTimeout(noteTimer); noteTimer = null;
+  const date = S.date, text = (S.note || '').trim();
+  if (text === ((S.day && S.day.note) || '').trim()) return notePending || Promise.resolve();
+  noteStatus('saving');
+  S.day = { ...S.day, note: text };
+  notePending = call('saveNote', date, text).then(() => {
+    cacheSet('day:' + date, { ...cacheGet('day:' + date), note: text });
+    if (S.date === date) noteStatus('ok');
+  }).catch(() => { if (S.date === date) { S.day = { ...S.day, note: '' }; noteStatus('err'); } });
+  return notePending;
+}
+
 async function askCoach() {
   flushSave();
+  await flushNote(); // メモも踏まえてもらうため先に保存
   const t = totals(), b = burn();
   const items = S.items.filter(i => i.qty > 0).map(i => {
     const f = foodOf(i) || { kcal: 0, p: 0, f: 0, c: 0 };
