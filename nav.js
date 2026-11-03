@@ -1,7 +1,7 @@
 // PC（横幅900px以上）は左側のメニュー、スマホは画面下のアイコンメニュー
 (function () {
   const path = location.pathname;
-  const page = path.endsWith('dash.html') ? 'dash' : path.endsWith('foods.html') ? 'foods' : path.endsWith('run.html') ? 'run' : 'log';
+  const page = path.endsWith('dash.html') ? 'dash' : path.endsWith('foods.html') ? 'foods' : path.endsWith('run.html') || path.endsWith('vdot.html') ? 'run' : 'log';
   const icon = d => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const items = [
     ['log', 'index.html', '今日の記録', icon('<path d="M4 6h16M4 12h16M4 18h10"/>')],

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VDOT一覧</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="体型管理">
+<meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e161d" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<script>const APP_VERSION = '20261103165716';</script>
+<script src="nav.js?v=20261103165716"></script>
+<script src="api.js?v=20261103165716"></script>
+<style>
+  :root {
+    --shadow: 0 1px 2px rgba(16,40,64,0.05), 0 6px 18px rgba(16,40,64,0.07); --shadow-lg: 0 10px 34px rgba(16,40,64,0.16);
+    --bg: #f3f6f9; --card: #ffffff; --text: #18242f; --sub: #6a7b89; --line: #e1e8ee; --track: #e4ecf2;
+    --accent: #1D90CC; --accent-soft: #e2f1fa; --on-accent: #ffffff; --danger: #CC1D29; --ok: #14895c; --ok-bg: #e1f3ea;
+    --p: #1D90CC; --p-bg: #e2f1fa; --f: #8d8914; --f-bg: #f6f5d8; --c: #CC1D29; --c-bg: #fae3e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 18px rgba(0,0,0,0.3); --shadow-lg: 0 10px 34px rgba(0,0,0,0.5);
+      --bg: #0e161d; --card: #17222c; --text: #e6edf2; --sub: #8ea0ae; --line: #26333e; --track: #22303b;
+      --accent: #3aa6de; --accent-soft: #133248; --on-accent: #0e161d; --danger: #e8545e; --ok: #5fd0a0; --ok-bg: #16362a;
+      --p: #4fb0e3; --p-bg: #133248; --f: #d9d35a; --f-bg: #33321a; --c: #e8545e; --c-bg: #3a1a1e;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Outfit", "Zen Kaku Gothic New", -apple-system, "Hiragino Sans", sans-serif; font-feature-settings: "palt"; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  button:active { transform: scale(0.97); }
+  input { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; outline: none; }
+  input:focus { border-color: var(--accent); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 16px 18px 40px; }
+  .top { display: flex; align-items: center; gap: 12px; }
+  .top h1 { font-size: 26px; font-weight: 700; margin: 0; flex: 1; }
+  .card { background: var(--card); border-radius: 20px; padding: 16px 18px; margin-top: 12px; }
+  .sub { font-size: 12px; color: var(--sub); }
+  .card h2 { font-size: 17px; font-weight: 700; margin: 0; }
+  .back { font-size: 14px; color: var(--accent); text-decoration: none; font-weight: 600; }
+  .vd { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .vd > div { background: var(--bg); border-radius: 14px; padding: 10px 12px; }
+  .vd b { display: block; font-size: 30px; font-weight: 700; letter-spacing: -0.5px; }
+  .vd small { display: block; font-size: 11px; color: var(--sub); }
+  .calc { display: grid; grid-template-columns: 1.2fr 1fr auto; gap: 8px; align-items: end; margin-top: 10px; }
+  .calc label { display: block; font-size: 12px; color: var(--sub); margin-bottom: 3px; }
+  select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; }
+  .calc .res { min-width: 86px; text-align: center; background: var(--accent-soft); color: var(--accent); border-radius: 12px; padding: 6px 10px; }
+  .calc .res b { display: block; font-size: 22px; line-height: 1.1; }
+  .tabs { display: flex; gap: 6px; background: var(--bg); border-radius: 99px; padding: 4px; margin-top: 10px; }
+  .tabs button { flex: 1; height: 34px; border-radius: 99px; font-size: 13px; font-weight: 600; color: var(--sub); }
+  .tabs button.on { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+  .tbl { overflow-x: auto; margin-top: 10px; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 13px; }
+  th, td { padding: 7px 4px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+  th { font-size: 12px; color: var(--sub); font-weight: 600; position: sticky; top: 0; background: var(--card); }
+  th:first-child, td:first-child { text-align: left; font-weight: 700; }
+  tr.cur td { background: var(--accent-soft); }
+  tr.goal td { background: var(--ok-bg); }
+  tr.calc td { color: var(--accent); font-weight: 700; }
+  .mk.k { background: var(--accent-soft); color: var(--accent); }
+  @media (min-width: 600px) { table { font-size: 14px; } th, td { padding: 8px 10px; } }
+  td .mk { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 99px; padding: 1px 6px; margin-left: 4px; vertical-align: 1px; }
+  .mk.c { background: var(--accent); color: var(--on-accent); }
+  .mk.g { background: var(--ok); color: var(--on-accent); }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 1px 7px; }
+  .note { font-size: 12px; color: var(--sub); line-height: 1.7; margin-top: 10px; }
+  .card { box-shadow: var(--shadow); }
+  @media (min-width: 900px) { .wrap { max-width: 980px; padding: 24px 32px 40px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="run.html">‹ ランニング</a>
+  <div class="top" style="margin-top:6px"><h1>VDOT一覧</h1></div>
+  <div class="card" id="me"></div>
+  <div class="card">
+    <h2>タイムからVDOTを調べる</h2>
+    <div class="calc">
+      <div><label>距離</label><select id="cKm" onchange="calc()"><option value="5">5km</option><option value="10">10km</option><option value="21.0975" selected>ハーフ</option><option value="42.195">フル</option></select></div>
+      <div><label>タイム</label><input id="cT" placeholder="1:59:59" inputmode="numeric" oninput="calc()"></div>
+      <div class="res"><span class="sub">VDOT</span><b id="cV">–</b></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>一覧</h2>
+    <div class="tabs"><button id="t-race" class="on" onclick="setTab('race')">予想タイム</button><button id="t-pace" onclick="setTab('pace')">練習ペース（/km）</button></div>
+    <div class="tbl"><table id="tbl"></table></div>
+    <div class="note" id="note"></div>
+  </div>
+</div>
+
+<script>
+// ダニエルズの式（サーバー側の vdot_ / velAt_ / predict_ と同じ計算）
+const vdotOf = (km, sec) => { const t = sec / 60, v = km * 1000 / t;
+  return (-4.60 + 0.182258 * v + 0.000104 * v * v) / (0.8 + 0.1894393 * Math.exp(-0.012778 * t) + 0.2989558 * Math.exp(-0.1932605 * t)); };
+const velAt = vo2 => { const a = 0.000104, b = 0.182258, c = -(4.60 + vo2); return (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a); };
+const paceAt = (v, pct) => 60000 / velAt(v * pct);
+const predict = (v, km) => { let lo = km * 120, hi = km * 900; for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (vdotOf(km, m) > v) lo = m; else hi = m; } return (lo + hi) / 2; };
+const hms = sec => { sec = Math.round(sec); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60; return (h ? `${h}:${String(m).padStart(2, '0')}` : m) + ':' + String(x).padStart(2, '0'); };
+const parseT = s => { const p = String(s).trim().split(':').map(Number); if (p.some(isNaN) || !p.length) return 0; return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p.length === 2 ? p[0] * 60 + p[1] : 0; };
+
+const MIN = 30, MAX = 70;
+let tab = 'race', me = null, calcV = null;
+try { tab = localStorage.getItem('vdot-tab') || 'race'; } catch (e) {}
+
+function renderMe() {
+  const el = document.getElementById('me'), x = me;
+  if (!x || (!x.cur && !x.goal)) { el.innerHTML = '<h2>あなたのVDOT</h2><div class="sub" style="margin-top:6px">3km以上の走行記録が入ると、今のVDOTを表に印で示します。</div>'; return; }
+  el.innerHTML = `<h2>あなたのVDOT</h2><div class="vd">
+    <div><span class="sub">今</span><b>${x.cur ?? '–'}</b><small>表の青い行</small></div>
+    <div><span class="sub">目標に必要</span><b>${x.goal ?? '–'}</b><small>${x.goal && x.cur ? `あと ${Math.max(0, Math.round((x.goal - x.cur) * 10) / 10)}・表の緑の行` : '表の緑の行'}</small></div></div>`;
+}
+
+function render() {
+  const cur = me && me.cur ? Math.floor(me.cur) : null, goal = me && me.goal ? Math.ceil(me.goal) : null, cv = calcV ? Math.round(calcV) : null;
+  const head = tab === 'race' ? ['5km', '10km', 'ハーフ', 'フル'] : ['E', 'M', 'T', 'I', 'R'];
+  let rows = '';
+  for (let v = MIN; v <= MAX; v++) {
+    const cells = tab === 'race'
+      ? [5, 10, 21.0975, 42.195].map(km => hms(predict(v, km)))
+      : [`${hms(paceAt(v, 0.70))}〜${hms(paceAt(v, 0.62))}`, hms(predict(v, 42.195) / 42.195), hms(paceAt(v, 0.88)), hms(paceAt(v, 0.975)), hms(paceAt(v, 0.975) - 15)];
+    const cls = [v === cur ? 'cur' : '', v === goal ? 'goal' : '', v === cv ? 'calc' : ''].join(' ');
+    const mk = (v === cur ? '<span class="mk c">今</span>' : '') + (v === goal ? '<span class="mk g">目標</span>' : '') + (v === cv && v !== cur && v !== goal ? '<span class="mk k">入力</span>' : '');
+    rows += `<tr class="${cls}" id="v${v}"><td>${v}${mk}</td>${cells.map(c => `<td>${c}</td>`).join('')}</tr>`;
+  }
+  document.getElementById('tbl').innerHTML = `<thead><tr><th>VDOT</th>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>`;
+  ['race', 'pace'].forEach(k => document.getElementById('t-' + k).className = k === tab ? 'on' : '');
+  document.getElementById('note').innerHTML = tab === 'race'
+    ? 'そのVDOTの力でレースを走ったときの目安タイムです。今のVDOTの行は、少数点以下を切り捨てた行に印を付けています。'
+    : 'E＝イージー（会話できる・週の大半）／M＝マラソンペース／T＝閾値（快適にきつい・20分前後）／I＝インターバル（3〜5分×数本）／R＝レペティション（200〜400m・休息たっぷり）。いずれも1kmあたりのペースです。';
+}
+
+function setTab(k) { tab = k; try { localStorage.setItem('vdot-tab', k); } catch (e) {} render(); }
+
+function calc() {
+  const km = Number(document.getElementById('cKm').value), sec = parseT(document.getElementById('cT').value);
+  const ok = sec > km * 120 && sec < km * 900;
+  calcV = ok ? vdotOf(km, sec) : null;
+  document.getElementById('cV').textContent = calcV ? (Math.round(calcV * 10) / 10).toFixed(1) : '–';
+  render();
+  if (calcV && calcV >= MIN && calcV <= MAX) document.getElementById('v' + Math.round(calcV)).scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ランニングページで読み込んだデータがあればそれを使い、裏で最新を取る
+const hit = cacheGet('run');
+me = hit && hit.vdot; renderMe(); render();
+call('getRunning').then(d => { cacheSet('run', d); me = d.vdot; renderMe(); render(); }).catch(() => {});
+</script>
+</body>
+</html>

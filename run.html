@@ -15,10 +15,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>const APP_VERSION = '20261102141356';</script>
-<script src="nav.js?v=20261102141356"></script>
-<script src="fit.js?v=20261102141356"></script>
-<script src="api.js?v=20261102141356"></script>
+<script>const APP_VERSION = '20261103165716';</script>
+<script src="nav.js?v=20261103165716"></script>
+<script src="fit.js?v=20261103165716"></script>
+<script src="api.js?v=20261103165716"></script>
 <style>
   :root {
     --shadow: 0 1px 2px rgba(16,40,64,0.05), 0 6px 18px rgba(16,40,64,0.07); --shadow-lg: 0 10px 34px rgba(16,40,64,0.16);
@@ -47,6 +47,7 @@
   .card h2 { font-size: 17px; font-weight: 700; margin: 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .card h2 button { font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 6px 12px; flex: none; }
   .sub { font-size: 12px; color: var(--sub); }
+  .card h2 a.lnk { font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 6px 12px; flex: none; text-decoration: none; }
   .goal { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; margin-top: 10px; }
   .goal .days { text-align: center; background: var(--accent-soft); color: var(--accent); border-radius: 16px; padding: 10px 14px; }
   .goal .days b { display: block; font-size: 30px; line-height: 1; }
@@ -379,10 +380,10 @@ function renderRuns() {
 // ---- VDOT とトレーニングペース（ダニエルズのランニング・フォーミュラ） ----
 function renderVdot() {
   const el = document.getElementById('vdot'), x = R.vdot;
-  if (!x || (!x.cur && !x.goal)) { el.innerHTML = '<h2>VDOT・トレーニングペース</h2><div class="sub" style="margin-top:6px">3km以上の走行記録が入ると、走力（VDOT）と練習のペースを計算します。</div>'; return; }
+  if (!x || (!x.cur && !x.goal)) { el.innerHTML = '<h2>VDOT・トレーニングペース<a class="lnk" href="vdot.html">VDOT一覧 ›</a></h2><div class="sub" style="margin-top:6px">3km以上の走行記録が入ると、走力（VDOT）と練習のペースを計算します。</div>'; return; }
   const p = x.paces, b = x.basis;
   const row = (k, name, desc, v) => `<div class="pz"><span class="tag" style="background:var(${TYPE[name][0]});color:var(${TYPE[name][1]})">${k}</span><b>${v}</b><span class="sub">${desc}</span></div>`;
-  el.innerHTML = `<h2>VDOT・トレーニングペース</h2>
+  el.innerHTML = `<h2>VDOT・トレーニングペース<a class="lnk" href="vdot.html">VDOT一覧 ›</a></h2>
     <div class="vd">
       <div><span class="sub">今のVDOT</span><b>${x.cur ?? '–'}</b>${b ? `<small>${md(b.date)}の${b.km}km（${hms(b.sec)}）から${b.race ? '' : '・練習なので低めに出やすい'}</small>` : ''}</div>
       <div><span class="sub">目標に必要なVDOT</span><b>${x.goal ?? '–'}</b>${x.goal && x.cur ? `<small>あと ${Math.max(0, Math.round((x.goal - x.cur) * 10) / 10)}</small>` : ''}</div>
