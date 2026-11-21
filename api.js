@@ -1,5 +1,7 @@
-// データの読み書き（Google Apps Script の JSON API を呼ぶ）
+// データの読み書き（Cloudflare のサーバー diet-api を呼ぶ）
 const API_URL = 'https://diet-api.diet-api.workers.dev'; // 2026-11-21 Cloudflare に移行（旧: GAS）
+// データのサーバーへの接続（暗号化の準備）を、画面を読み込んでいる間に始めておく
+{ const l = document.createElement('link'); l.rel = 'preconnect'; l.href = new URL(API_URL).origin; l.crossOrigin = ''; document.head.appendChild(l); }
 const KEY_NAME = 'dietKey';
 
 // 合言葉（キー）は URL の #k=... で受け取り、この端末にも保存する。
@@ -71,8 +73,11 @@ async function checkUpdate() {
     if (v && v !== APP_VERSION) location.replace(location.pathname + '?v=' + v + location.hash);
   } catch (e) {}
 }
-checkUpdate();
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
+setTimeout(checkUpdate, 2500); // 開いた直後のデータの読み込みとぶつからないよう、少し後で確認する
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(checkUpdate, 1500); });
+
+// 画面のファイルをスマホに保存して、次から開いた瞬間に出す（sw.js）
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 // P・F・C を入れたら kcal を自動計算（P×4 ＋ F×9 ＋ C×4）。kcal を自分で書き換えたら、その値を優先して上書きしない
 // 入力欄に data-pfc="グループ名:kcal|p|f|c" を付けておけば、どの画面でも働く
