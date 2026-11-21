@@ -1,5 +1,5 @@
 // データの読み書き（Google Apps Script の JSON API を呼ぶ）
-const API_URL = 'https://script.google.com/macros/s/AKfycbzBGQYEsoGpGgVEw_quuisdGvJvje-AqTDol7TsdjhZgfWNsJDd6_7E1ENN7tv4ibuKsw/exec';
+const API_URL = 'https://diet-api.diet-api.workers.dev'; // 2026-11-21 Cloudflare に移行（旧: GAS）
 const KEY_NAME = 'dietKey';
 
 // 合言葉（キー）は URL の #k=... で受け取り、この端末にも保存する。
