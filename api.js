@@ -41,13 +41,13 @@ async function call(fn, ...args) {
   const key = apiKey();
   if (!key) throw new Error('合言葉が入力されていません。ページを開き直して入力してください。');
   // text/plain で送ると CORS の事前確認が不要になる。通信が一瞬切れた場合に備えて、読み込みは2回まで再試行
-  // データを書き換えない処理（読み込み・写真や文章の読み取り）は、通信が切れたら2回までやり直す
-  const body = JSON.stringify({ key, fn, args }), safe = /^(getInit|getDay|getDashboard|getRunning|readLabel|readRunShots|parseMeal|parseMealPhotos)$/.test(fn);
+  // 何度送っても結果が同じ処理（読み込み・読み取り・1日分の上書き保存・メモ）は、通信が切れたら2回までやり直す
+  const body = JSON.stringify({ key, fn, args }), safe = /^(getInit|getDay|getDashboard|getRunning|readLabel|readRunShots|parseMeal|parseMealPhotos|saveDay|saveNote)$/.test(fn);
   let res;
   inflight++;
   try {
     for (let i = 0; ; i++) {
-      try { res = await fetch(API_URL, { method: 'POST', body }); break; }
+      try { res = await fetch(API_URL, { method: 'POST', body, keepalive: body.length < 60000 }); break; } // keepalive：アプリを閉じても送信を続ける
       catch (e) {
         if (!safe || i >= 2) throw new Error('通信できませんでした。電波の良い場所でもう一度試してください（' + (e.message || e) + '）');
         await new Promise(r => setTimeout(r, 1000 * (i + 1)));

@@ -15,9 +15,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<script>const APP_VERSION = '20261103165716';</script>
-<script src="nav.js?v=20261103165716"></script>
-<script src="api.js?v=20261103165716"></script>
+<script>const APP_VERSION = '20261121091827';</script>
+<script src="nav.js?v=20261121091827"></script>
+<script src="api.js?v=20261121091827"></script>
 <style>
   :root {
     --shadow: 0 1px 2px rgba(16,40,64,0.05), 0 6px 18px rgba(16,40,64,0.07); --shadow-lg: 0 10px 34px rgba(16,40,64,0.16);
@@ -201,6 +201,15 @@ function loadDay(day) {
   S.act = { ...(day.act || { steps: 0, runKm: 0, runMin: 0, other: 0 }) };
   S.note = day.note || ''; S.noteSt = '';
   S.dirty = false; S.failed = false; S.wTouched = false; S.aTouched = false;
+  // まだサーバーに届いていない変更が端末に残っていれば、それを優先して送り直す
+  const p = pendingGet(day.date);
+  if (p) {
+    S.items = p.items.map(i => ({ ...i }));
+    if (p.weight != null) { S.weight = p.weight; S.wTouched = true; }
+    if (p.act) { S.act = { ...p.act }; S.aTouched = true; }
+    S.dirty = true; S.day = { ...day, saved: false };
+    setTimeout(save, 300);
+  }
   render();
 }
 
@@ -220,7 +229,7 @@ async function init() {
   if (base && day) { S.meals = base.meals; S.sets = base.sets; S.conf = base.conf; setFoods(base.foods); loadDay(day); }
   try {
     applyInit(await call('getInit', today()));
-    prefetch(shift(today(), -1));
+    prefetch(shift(today(), -1)); sendOtherPending();
   } catch (e) {
     if (!S.day) document.getElementById('app').innerHTML = `<div class="loading">読み込めませんでした。<br>${esc(e.message || e)}</div>`;
   }
@@ -273,14 +282,26 @@ async function copyPrev() {
   } catch (e) { alert('読み込めませんでした: ' + (e.message || e)); render(); }
 }
 
-// ---- 自動保存：変更が止まって1.2秒たったら裏で保存する ----
-let autoTimer = null;
-function scheduleSave() { clearTimeout(autoTimer); autoTimer = setTimeout(save, 1200); }
+// ---- 自動保存：変更が止まって0.8秒たったら裏で保存する ----
+// 送る前に内容を端末にも書いておき（pending）、サーバーに届いたら消す。アプリを閉じても電波が切れても失われない
+let autoTimer = null, retryTimer = null, retryN = 0;
+function scheduleSave() { clearTimeout(autoTimer); autoTimer = setTimeout(save, 800); }
+const pendingGet = date => cacheGet('pending:' + date);
+function pendingAll() { const out = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith(CACHE + 'pending:')) out.push(k.slice((CACHE + 'pending:').length)); } } catch (e) {} return out; }
+function pendingDel(date, seq) { const p = pendingGet(date); if (p && p.seq === seq) try { localStorage.removeItem(CACHE + 'pending:' + date); } catch (e) {} }
+// 別の日に残った未送信分（今表示していない日）を送る
+async function sendOtherPending() {
+  for (const date of pendingAll()) {
+    if (date === S.date) continue;
+    const p = pendingGet(date);
+    try { const d = await call('saveDay', date, p.items.filter(i => i.qty > 0), p.weight, p.act); cacheSet('day:' + date, d); pendingDel(date, p.seq); } catch (e) {}
+  }
+}
 function flushSave() { clearTimeout(autoTimer); if (S.dirty) save(); }
 
 function statusInfo() {
   const day = S.day;
-  if (S.failed) return ['err', '保存できませんでした。下のボタンからもう一度試してください'];
+  if (S.failed) return ['err', 'まだ送れていません。この端末には残っているので、電波が戻ると自動で送ります'];
   if (S.dirty || S.sending) return ['', '保存中…'];
   if (day.copiedFrom) return ['copied', `${fmtDate(day.copiedFrom)}の記録をコピーしました。変わったところだけ直すと自動で保存されます`];
   if (day.saved) return ['ok', '✓ 自動保存済み'];
@@ -458,16 +479,24 @@ async function save() {
   if (S.day.saved && !S.dirty && !S.failed) return;
   if (S.sending) { S.again = true; return; }
   // 体重・活動は、この画面で触ったときだけ送る（ヘルスケアから自動で入った値を古い値で上書きしないため）
+  clearTimeout(retryTimer);
   const date = S.date, items = S.items.filter(i => i.qty > 0);
-  const weight = S.wTouched ? S.weight : null, act = S.aTouched ? { ...S.act } : null;
+  // 体重・活動は、前に送り損ねた分も含めて送る
+  const prev = pendingGet(date) || {};
+  const weight = S.wTouched ? S.weight : prev.weight ?? null, act = S.aTouched ? { ...S.act } : prev.act || null;
+  const seq = Date.now();
+  cacheSet('pending:' + date, { seq, items: S.items.map(i => ({ ...i })), weight, act });
   S.dirty = false; S.failed = false; S.wTouched = false; S.aTouched = false; S.day = { ...S.day, saved: true, copiedFrom: '' }; S.sending = true;
   updateStatus();
   try {
     const d = await call('saveDay', date, items, weight, act);
+    pendingDel(date, seq); retryN = 0;
     cacheSet('day:' + date, d);
-    if (S.date === date && !S.dirty) S.day = d;
+    if (S.date === date && !S.dirty) S.day = { ...d, note: S.day.note };
   } catch (e) {
-    if (S.date === date) { S.dirty = true; S.failed = true; S.day = { ...S.day, saved: false }; }
+    // 送れなかった内容は端末に残っている。少し待って自動でもう一度送る（3秒→10秒→30秒…）
+    if (S.date === date) { S.dirty = true; S.failed = retryN >= 2; S.day = { ...S.day, saved: false }; if (weight != null) S.wTouched = true; if (act) S.aTouched = true; }
+    retryTimer = setTimeout(() => { if (S.dirty) save(); }, [3000, 10000, 30000, 60000][Math.min(retryN++, 3)]);
   } finally {
     S.sending = false; updateStatus();
     if (S.again) { S.again = false; if (S.dirty && !S.failed) save(); }
@@ -907,8 +936,10 @@ async function saveAsSet(meal) {
 }
 
 // 画面に戻ってきたら最新を読み直す（別の端末で保存した内容を反映するため）
+window.addEventListener('online', () => { if (S.day && S.dirty) save(); sendOtherPending(); }); // 電波が戻ったらすぐ送る
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && S.day) return flushSave(); // アプリを閉じる前に保存
+  if (document.visibilityState === 'hidden' && S.day) { flushSave(); flushNote(); return; } // アプリを閉じる前に保存
+  if (document.visibilityState === 'visible' && S.day && S.dirty && !S.sending) { save(); return; } // 送れていない分があれば先に送る
   if (document.visibilityState !== 'visible' || !S.day || S.dirty || S.sending || sheetOpen()) return;
   call('getInit', S.date).then(applyInit).catch(() => {}); // 設定や食品マスタの変更も取り込む
 });
