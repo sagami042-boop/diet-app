@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>美容</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="体型管理">
+<meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e161d" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<script>const APP_VERSION = '20261121095151';</script>
+<script src="nav.js?v=20261121095151"></script>
+<script src="api.js?v=20261121095151"></script>
+<style>
+  :root {
+    --shadow: 0 1px 2px rgba(16,40,64,0.05), 0 6px 18px rgba(16,40,64,0.07); --shadow-lg: 0 10px 34px rgba(16,40,64,0.16);
+    --bg: #f3f6f9; --card: #ffffff; --text: #18242f; --sub: #6a7b89; --line: #e1e8ee; --track: #e4ecf2;
+    --accent: #1D90CC; --accent-soft: #e2f1fa; --on-accent: #ffffff; --danger: #CC1D29; --ok: #14895c; --ok-bg: #e1f3ea;
+    --p: #1D90CC; --p-bg: #e2f1fa; --f: #8d8914; --f-bg: #f6f5d8; --c: #CC1D29; --c-bg: #fae3e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 18px rgba(0,0,0,0.3); --shadow-lg: 0 10px 34px rgba(0,0,0,0.5);
+      --bg: #0e161d; --card: #17222c; --text: #e6edf2; --sub: #8ea0ae; --line: #26333e; --track: #22303b;
+      --accent: #3aa6de; --accent-soft: #133248; --on-accent: #0e161d; --danger: #e8545e; --ok: #5fd0a0; --ok-bg: #16362a;
+      --p: #4fb0e3; --p-bg: #133248; --f: #d9d35a; --f-bg: #33321a; --c: #e8545e; --c-bg: #3a1a1e;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Outfit", "Zen Kaku Gothic New", -apple-system, "Hiragino Sans", sans-serif; font-feature-settings: "palt"; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  button:active { transform: scale(0.97); }
+  input { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; outline: none; }
+  input:focus { border-color: var(--accent); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 16px 18px 40px; }
+  .top { display: flex; align-items: center; gap: 12px; }
+  .top h1 { font-size: 26px; font-weight: 700; margin: 0; flex: 1; }
+  .card { background: var(--card); border-radius: 20px; padding: 16px 18px; margin-top: 12px; }
+  .sub { font-size: 12px; color: var(--sub); }
+  .card h2 { font-size: 17px; font-weight: 700; margin: 0; }
+  textarea, select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; outline: none; }
+  textarea { min-height: 72px; resize: vertical; line-height: 1.6; }
+  textarea:focus { border-color: var(--accent); }
+  .card h2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .btn-main { width: 100%; height: 46px; margin-top: 12px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .btn-soft { height: 34px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 13px; padding: 0 14px; }
+  .btn-del { color: var(--danger); font-size: 13px; font-weight: 600; padding: 8px 4px; }
+  .kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .kpi > div { background: var(--bg); border-radius: 14px; padding: 10px 12px; }
+  .kpi b { display: block; font-size: 24px; font-weight: 700; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+  .kpi small { font-size: 11px; color: var(--sub); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 10px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 4px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th { font-size: 11px; color: var(--sub); font-weight: 600; }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  .month { font-size: 12px; color: var(--sub); font-weight: 700; margin: 14px 0 2px; display: flex; justify-content: space-between; }
+  .item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 11px 0; border-top: 1px solid var(--line); }
+  .item .d { flex: none; width: 42px; text-align: center; line-height: 1.1; }
+  .item .d b { display: block; font-size: 18px; }
+  .item .d span { font-size: 10px; color: var(--sub); }
+  .item .body { flex: 1; min-width: 0; }
+  .item .nm { font-weight: 700; }
+  .item .meta { font-size: 12px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .pr { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .item .cam { font-size: 11px; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 1px 7px; margin-left: 6px; font-weight: 600; }
+  .empty { text-align: center; color: var(--sub); padding: 24px 0; font-size: 14px; }
+  .modal { position: fixed; inset: 0; background: rgba(10,20,30,0.35); display: none; align-items: flex-end; z-index: 20; }
+  .modal.open { display: flex; }
+  .modal .box { background: var(--bg); width: 100%; max-width: 640px; margin: 0 auto; border-radius: 24px 24px 0 0; padding: 16px 18px calc(20px + env(safe-area-inset-bottom)); max-height: 92vh; overflow-y: auto; box-shadow: var(--shadow-lg); }
+  .modal h3 { font-size: 18px; margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; }
+  .modal h3 button { font-size: 14px; color: var(--sub); padding: 6px; }
+  label.l { display: block; font-size: 12px; color: var(--sub); margin: 10px 0 3px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .ph { margin-top: 12px; }
+  .ph .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .ph .th { position: relative; width: 84px; height: 84px; border-radius: 12px; overflow: hidden; background: var(--card); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--sub); }
+  .ph .th img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+  .ph .th .x { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 99px; background: rgba(0,0,0,0.55); color: #fff; font-size: 13px; line-height: 22px; }
+  .ph .add { width: 84px; height: 84px; border-radius: 12px; border: 1.5px dashed var(--line); color: var(--accent); font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .ph .add b { font-size: 22px; line-height: 1; }
+  .err { color: var(--danger); font-size: 13px; margin-top: 8px; }
+  .viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 40; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px; }
+  .viewer.open { display: flex; }
+  .viewer img { max-width: 100%; max-height: 82vh; object-fit: contain; }
+  .viewer .cap { color: #fff; font-size: 13px; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .compare figure { margin: 0; }
+  .compare .im { aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--sub); }
+  .compare img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+  .compare figcaption { font-size: 12px; color: var(--sub); margin-top: 4px; text-align: center; }
+  .card, .modal .box { box-shadow: var(--shadow); }
+  @media (min-width: 900px) {
+    .wrap { max-width: 1100px; padding: 24px 32px 40px; }
+    .cols { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 16px; align-items: start; }
+    .modal { align-items: center; }
+    .modal .box { border-radius: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>美容</h1><button class="btn-soft" onclick="openEdit()">＋ 施術を記録</button></div>
+  <div class="cols">
+    <div><div class="card" id="sum"></div><div class="card" id="cmp"></div></div>
+    <div><div class="card" id="list"><div class="empty">読み込み中…</div></div></div>
+  </div>
+</div>
+<div class="modal" id="modal" onclick="if(event.target===this)closeEdit()"><div class="box" id="mbox"></div></div>
+<div class="viewer" id="viewer" onclick="this.classList.remove('open')"><img id="vimg" alt=""><div class="cap" id="vcap"></div></div>
+<datalist id="dl-name"></datalist><datalist id="dl-clinic"></datalist><datalist id="dl-area"></datalist>
+
+<script>
+let B = null, draft = null, busy = 0, cmpName = '', cmpNames = [];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const yen = n => '¥' + Math.round(n || 0).toLocaleString();
+const dt = s => new Date(s + 'T00:00:00');
+const KIND = { before: 'ビフォー', after: 'アフター' };
+
+// ---- 写真：取ってきたものはこの画面を開いている間覚えておく ----
+const pcache = new Map();
+async function photoUrl(id) {
+  if (!pcache.has(id)) pcache.set(id, call('getPhoto', id).then(b => 'data:image/jpeg;base64,' + b));
+  return pcache.get(id);
+}
+// <img data-pid> を見つけたら中身を入れる
+function fillPhotos(root) {
+  root.querySelectorAll('img[data-pid]').forEach(async img => {
+    try { img.src = await photoUrl(img.dataset.pid); } catch (e) { img.replaceWith(Object.assign(document.createElement('span'), { textContent: '読めません' })); }
+  });
+}
+function view(id, cap) {
+  document.getElementById('vcap').textContent = cap || '';
+  photoUrl(id).then(u => { document.getElementById('vimg').src = u; document.getElementById('viewer').classList.add('open'); });
+}
+// 送る前に長い辺1600pxまで縮めて JPEG にする（1枚数百KB）
+function shrink(file) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      res(c.toDataURL('image/jpeg', 0.82).split(',')[1]);
+    };
+    img.onerror = () => rej(new Error('画像を開けませんでした'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// ---- 一覧・集計 ----
+function load(d) { B = d; cacheSet('beauty', d); render(); }
+function render() {
+  const items = B.items, y = B.today.slice(0, 4), ym = B.today.slice(0, 7);
+  const sum = xs => xs.reduce((a, x) => a + x.price, 0);
+  const yr = items.filter(x => x.date.startsWith(y)), mo = items.filter(x => x.date.startsWith(ym));
+  const by = {};
+  items.forEach(x => { const g = by[x.name] = by[x.name] || { n: 0, total: 0, last: '' }; g.n++; g.total += x.price; if (x.date > g.last) g.last = x.date; });
+  const names = Object.keys(by).sort((a, b) => by[b].last.localeCompare(by[a].last));
+  document.getElementById('sum').innerHTML = `<h2>まとめ</h2>
+    <div class="kpi"><div><small>${y}年</small><b>${yen(sum(yr))}</b><small>${yr.length}回</small></div><div><small>今月</small><b>${yen(sum(mo))}</b><small>${mo.length}回</small></div></div>
+    ${names.length ? `<table><thead><tr><th>施術</th><th>回数</th><th>前回</th><th>合計</th></tr></thead><tbody>
+      ${names.map(n => `<tr><td>${esc(n)}</td><td>${by[n].n}</td><td>${by[n].last.slice(5).replace('-', '/')}</td><td>${yen(by[n].total)}</td></tr>`).join('')}</tbody></table>` : ''}`;
+  renderCompare(names);
+  // 月ごとに並べる
+  let html = '<h2>履歴</h2>', cur = '';
+  if (!items.length) html += '<div class="empty">まだ記録がありません。<br>右上の「＋ 施術を記録」から追加できます。</div>';
+  items.forEach(x => {
+    const m = x.date.slice(0, 7);
+    if (m !== cur) { cur = m; html += `<div class="month"><span>${Number(m.slice(0, 4))}年${Number(m.slice(5))}月</span><span>${yen(sum(items.filter(i => i.date.startsWith(m))))}</span></div>`; }
+    const d = dt(x.date);
+    html += `<button class="item" onclick="openEdit('${x.id}')"><div class="d"><b>${d.getDate()}</b><span>${'日月火水木金土'[d.getDay()]}</span></div>
+      <div class="body"><div class="nm">${esc(x.name)}${x.photos.length ? `<span class="cam">写真${x.photos.length}</span>` : ''}</div>
+      <div class="meta">${esc([x.clinic, x.area, x.memo].filter(Boolean).join('・'))}</div></div><div class="pr">${x.price ? yen(x.price) : ''}</div></button>`;
+  });
+  document.getElementById('list').innerHTML = html;
+  ['name', 'clinic', 'area'].forEach(k => {
+    document.getElementById('dl-' + k).innerHTML = [...new Set(items.map(x => x[k]).filter(Boolean))].map(v => `<option value="${esc(v)}">`).join('');
+  });
+}
+
+// 施術ごとに、いちばん古いビフォーと最新のアフターを並べる
+function renderCompare(names) {
+  cmpNames = names = names || cmpNames;
+  const el = document.getElementById('cmp');
+  const withPh = names.filter(n => B.items.some(x => x.name === n && x.photos.length));
+  if (!withPh.length) { el.innerHTML = '<h2>ビフォー・アフター</h2><div class="sub" style="margin-top:6px">写真を付けて記録すると、ここで最初と最新を見比べられます。</div>'; return; }
+  if (!withPh.includes(cmpName)) cmpName = withPh[0];
+  const xs = B.items.filter(x => x.name === cmpName && x.photos.length).slice().reverse(); // 古い順
+  const first = xs.map(x => ({ x, p: x.photos.find(p => p.kind === 'before') || x.photos[0] }))[0];
+  const lastX = xs[xs.length - 1], last = { x: lastX, p: lastX.photos.filter(p => p.kind === 'after').pop() || lastX.photos[lastX.photos.length - 1] };
+  const fig = (o, t) => `<figure><div class="im">${o && o.p ? `<img data-pid="${o.p.id}" alt="" onclick="view('${o.p.id}','${esc(cmpName)} ${o.x.date} ${KIND[o.p.kind]}')">` : 'なし'}</div>
+    <figcaption>${t}${o ? `・${o.x.date.slice(5).replace('-', '/')}` : ''}</figcaption></figure>`;
+  el.innerHTML = `<h2>ビフォー・アフター${withPh.length > 1 ? `<select style="width:auto;padding:6px 10px;font-size:13px" onchange="cmpName=this.value;renderCompare()">${withPh.map(n => `<option ${n === cmpName ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : ''}</h2>
+    <div class="sub" style="margin-top:4px">${esc(cmpName)}（写真のある${xs.length}回）</div>
+    <div class="compare">${fig(first, '最初')}${xs.length > 1 || first.p.id !== last.p.id ? fig(last, '最新') : fig(null, '最新')}</div>`;
+  fillPhotos(el);
+}
+
+// ---- 追加・編集 ----
+function openEdit(id) {
+  const x = id ? B.items.find(i => i.id === id) : null;
+  draft = x ? JSON.parse(JSON.stringify(x)) : { date: B.today, name: '', clinic: '', area: '', price: '', memo: '', photos: [] };
+  if (!x) { // 前回と同じ施術を続けて入れやすいように、直近のクリニックを入れておく
+    const last = B.items[0]; if (last) draft.clinic = last.clinic;
+  }
+  renderEdit();
+  document.getElementById('modal').classList.add('open');
+}
+function closeEdit() { document.getElementById('modal').classList.remove('open'); draft = null; }
+function setF(k, v) { draft[k] = v; }
+function phRow(kind) {
+  const ps = draft.photos.filter(p => p.kind === kind);
+  return `<div class="ph"><span class="sub">${KIND[kind]}</span><div class="row">
+    ${ps.map(p => `<div class="th">${p.local ? `<img src="${p.local}" alt="">` : `<img data-pid="${p.id}" alt="" onclick="view('${p.id}','${KIND[kind]}')">`}<button class="x" onclick="dropPhoto('${p.id}')" aria-label="写真を外す">×</button></div>`).join('')}
+    <label class="add"><b>＋</b>写真<input type="file" accept="image/*" multiple hidden onchange="pickPhotos(this, '${kind}')"></label>
+  </div></div>`;
+}
+function renderEdit(err) {
+  const d = draft;
+  document.getElementById('mbox').innerHTML = `<h3>${d.id ? '施術の記録' : '施術を記録'}<button onclick="closeEdit()">閉じる</button></h3>
+    <div class="grid2"><div><label class="l">日付</label><input type="date" value="${d.date}" onchange="setF('date', this.value)"></div>
+      <div><label class="l">金額（円）</label><input type="number" inputmode="numeric" value="${d.price || ''}" placeholder="0" oninput="setF('price', this.value)"></div></div>
+    <label class="l">施術名</label><input list="dl-name" value="${esc(d.name)}" placeholder="例：医療脱毛、ハイフ、ボトックス" oninput="setF('name', this.value)">
+    <div class="grid2"><div><label class="l">クリニック</label><input list="dl-clinic" value="${esc(d.clinic)}" oninput="setF('clinic', this.value)"></div>
+      <div><label class="l">部位</label><input list="dl-area" value="${esc(d.area)}" placeholder="例：ひげ、顔全体" oninput="setF('area', this.value)"></div></div>
+    <label class="l">メモ（出力・痛み・ダウンタイム・次回の予約など）</label><textarea oninput="setF('memo', this.value)">${esc(d.memo)}</textarea>
+    ${phRow('before')}${phRow('after')}
+    ${busy ? `<div class="sub" style="margin-top:8px">写真を送っています…（${busy}枚）</div>` : ''}
+    ${err ? `<div class="err">${esc(err)}</div>` : ''}
+    <button class="btn-main" onclick="saveEdit()" ${busy ? 'disabled style="opacity:.5"' : ''}>${d.id ? '保存する' : '記録する'}</button>
+    ${d.id ? `<div style="text-align:center;margin-top:8px"><button class="btn-del" onclick="delEdit()">この記録を削除</button></div>` : ''}`;
+  fillPhotos(document.getElementById('mbox'));
+}
+async function pickPhotos(input, kind) {
+  const files = [...input.files];
+  busy += files.length; renderEdit();
+  let err = '';
+  for (const f of files) {
+    try {
+      const b64 = await shrink(f);
+      const { id } = await call('addPhoto', b64);
+      pcache.set(id, Promise.resolve('data:image/jpeg;base64,' + b64));
+      if (draft) draft.photos.push({ id, kind });
+    } catch (e) { err = e.message || String(e); }
+    busy--; if (draft) renderEdit(err);
+  }
+}
+function dropPhoto(id) { draft.photos = draft.photos.filter(p => p.id !== id); renderEdit(); }
+async function saveEdit() {
+  const d = draft;
+  if (!d.name.trim()) return renderEdit('施術名を入れてください');
+  const btn = document.querySelector('#mbox .btn-main'); btn.disabled = true; btn.textContent = '保存中…';
+  try { load(await call('saveBeauty', d)); closeEdit(); }
+  catch (e) { renderEdit(e.message || String(e)); }
+}
+async function delEdit() {
+  if (!confirm('この記録と写真を削除します。元に戻せません。よろしいですか？')) return;
+  try { load(await call('deleteBeauty', draft.id)); closeEdit(); }
+  catch (e) { renderEdit(e.message || String(e)); }
+}
+
+const hit = cacheGet('beauty');
+if (hit) load(hit);
+call('getBeauty').then(d => { if (JSON.stringify(d) !== JSON.stringify(B)) load(d); })
+  .catch(e => { if (!hit) document.getElementById('list').innerHTML = `<div class="empty">読み込めませんでした。<br>${esc(e.message || e)}</div>`; });
+</script>
+</body>
+</html>

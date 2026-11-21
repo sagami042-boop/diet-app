@@ -1,13 +1,14 @@
 // PC（横幅900px以上）は左側のメニュー、スマホは画面下のアイコンメニュー
 (function () {
   const path = location.pathname;
-  const page = path.endsWith('dash.html') ? 'dash' : path.endsWith('foods.html') ? 'foods' : path.endsWith('run.html') || path.endsWith('vdot.html') ? 'run' : 'log';
+  const page = path.endsWith('dash.html') ? 'dash' : path.endsWith('foods.html') ? 'foods' : path.endsWith('beauty.html') ? 'beauty' : path.endsWith('run.html') || path.endsWith('vdot.html') ? 'run' : 'log';
   const icon = d => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const items = [
     ['log', 'index.html', '今日の記録', icon('<path d="M4 6h16M4 12h16M4 18h10"/>')],
     ['dash', 'dash.html', 'ダッシュボード', icon('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>')],
     ['run', 'run.html', 'ランニング', icon('<circle cx="14" cy="4.5" r="2"/><path d="M6 20l3.5-5 3 2.5L14 13l3 3h3M9 11l3-3 3 2 2-1"/>')],
     ['foods', 'foods.html', '食品リスト', icon('<path d="M5 4h14v16H5z"/><path d="M9 8h6M9 12h6M9 16h3"/>')],
+    ['beauty', 'beauty.html', '美容', icon('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>')],
   ];
   const css = `
     .side-nav { display: none; }
@@ -15,7 +16,7 @@
     .tab-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; display: flex; background: var(--card); border-top: 1px solid var(--line);
       padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
     .tab-bar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0; color: var(--sub);
-      text-decoration: none; font-size: 10.5px; font-weight: 500; }
+      text-decoration: none; font-size: 10px; font-weight: 500; white-space: nowrap; }
     .tab-bar a svg { width: 24px; height: 24px; }
     .tab-bar a.on { color: var(--accent); font-weight: 700; }
     body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
