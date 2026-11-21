@@ -67,6 +67,8 @@ async function call(fn, ...args) {
 // 新しい版が公開されていたら自動で読み込み直す（GitHub Pages は最大10分キャッシュするため）
 async function checkUpdate() {
   if (typeof APP_VERSION === 'undefined' || inflight > 0 || (typeof S !== 'undefined' && (S.dirty || S.sending))) return;
+  // 写真を選んでいる途中や、入力中の画面（シート・詳細）を開いているときは切り替えない
+  if (document.querySelector('input[data-file-picker], .sheet-bg, .modal.open, .modal[style*="flex"]')) return;
   try {
     const t = await (await fetch(location.pathname + '?nc=' + Date.now(), { cache: 'no-store' })).text();
     const v = (t.match(/APP_VERSION = '([^']+)'/) || [])[1];
@@ -92,3 +94,16 @@ document.addEventListener('input', e => {
   if (!v('p') && !v('f') && !v('c')) return;
   kc.value = Math.round(v('p') * 4 + v('f') * 9 + v('c') * 4);
 });
+
+// ファイル選択（写真・Garmin）を開く。iPhone では、画面に置いていない選択欄は写真を選んでいる間に片付けられ、
+// 選んでも何も起きないことがある。なので見えない形で画面に置いてから開き、選び終わったら外す
+function openFileInput(inp) {
+  document.querySelectorAll('input[data-file-picker]').forEach(x => x.remove()); // 前回キャンセルされて残った分
+  inp.dataset.filePicker = '1';
+  inp.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;opacity:0';
+  const done = inp.onchange;
+  inp.onchange = e => { inp.remove(); return done && done.call(inp, e); };
+  inp.addEventListener('cancel', () => inp.remove()); // 選ばずに閉じたとき
+  document.body.appendChild(inp);
+  inp.click();
+}
