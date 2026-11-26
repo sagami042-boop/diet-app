@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ゴルフ</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="体型管理">
+<meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e161d" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<script>const APP_VERSION = '20261126164950';</script>
+<script src="nav.js?v=20261126164950"></script>
+<script src="api.js?v=20261126164950"></script>
+<style>
+  :root {
+    --shadow: 0 1px 2px rgba(16,40,64,0.05), 0 6px 18px rgba(16,40,64,0.07); --shadow-lg: 0 10px 34px rgba(16,40,64,0.16);
+    --bg: #f3f6f9; --card: #ffffff; --text: #18242f; --sub: #6a7b89; --line: #e1e8ee; --track: #e4ecf2;
+    --accent: #1D90CC; --accent-soft: #e2f1fa; --on-accent: #ffffff; --danger: #CC1D29; --ok: #14895c; --ok-bg: #e1f3ea;
+    --p: #1D90CC; --p-bg: #e2f1fa; --f: #8d8914; --f-bg: #f6f5d8; --c: #CC1D29; --c-bg: #fae3e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 18px rgba(0,0,0,0.3); --shadow-lg: 0 10px 34px rgba(0,0,0,0.5);
+      --bg: #0e161d; --card: #17222c; --text: #e6edf2; --sub: #8ea0ae; --line: #26333e; --track: #22303b;
+      --accent: #3aa6de; --accent-soft: #133248; --on-accent: #0e161d; --danger: #e8545e; --ok: #5fd0a0; --ok-bg: #16362a;
+      --p: #4fb0e3; --p-bg: #133248; --f: #d9d35a; --f-bg: #33321a; --c: #e8545e; --c-bg: #3a1a1e;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Outfit", "Zen Kaku Gothic New", -apple-system, "Hiragino Sans", sans-serif; font-feature-settings: "palt"; font-size: 15px; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  button:active { transform: scale(0.97); }
+  input { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; outline: none; }
+  input:focus { border-color: var(--accent); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 16px 18px 40px; }
+  .top { display: flex; align-items: center; gap: 12px; }
+  .top h1 { font-size: 26px; font-weight: 700; margin: 0; flex: 1; }
+  .card { background: var(--card); border-radius: 20px; padding: 16px 18px; margin-top: 12px; }
+  .sub { font-size: 12px; color: var(--sub); }
+  .card h2 { font-size: 17px; font-weight: 700; margin: 0; }
+  textarea, select { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; width: 100%; outline: none; }
+  textarea { min-height: 72px; resize: vertical; line-height: 1.6; }
+  textarea:focus { border-color: var(--accent); }
+  .card h2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .btn-main { width: 100%; height: 46px; margin-top: 12px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .btn-soft { height: 34px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 13px; padding: 0 14px; }
+  .btn-del { color: var(--danger); font-size: 13px; font-weight: 600; padding: 8px 4px; }
+  .kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .kpi > div { background: var(--bg); border-radius: 14px; padding: 10px 12px; }
+  .kpi b { display: block; font-size: 24px; font-weight: 700; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+  .kpi small { font-size: 11px; color: var(--sub); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 10px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 4px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th { font-size: 11px; color: var(--sub); font-weight: 600; }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  .month { font-size: 12px; color: var(--sub); font-weight: 700; margin: 14px 0 2px; display: flex; justify-content: space-between; }
+  .item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 11px 0; border-top: 1px solid var(--line); }
+  .item .d { flex: none; width: 42px; text-align: center; line-height: 1.1; }
+  .item .d b { display: block; font-size: 18px; }
+  .item .d span { font-size: 10px; color: var(--sub); }
+  .item .body { flex: 1; min-width: 0; }
+  .item .nm { font-weight: 700; }
+  .item .meta { font-size: 12px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .pr { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .item .cam { font-size: 11px; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 1px 7px; margin-left: 6px; font-weight: 600; }
+  .empty { text-align: center; color: var(--sub); padding: 24px 0; font-size: 14px; }
+  .modal { position: fixed; inset: 0; background: rgba(10,20,30,0.35); display: none; align-items: flex-end; z-index: 20; }
+  .modal.open { display: flex; }
+  .modal .box { background: var(--bg); width: 100%; max-width: 640px; margin: 0 auto; border-radius: 24px 24px 0 0; padding: 16px 18px calc(20px + env(safe-area-inset-bottom)); max-height: 92vh; overflow-y: auto; box-shadow: var(--shadow-lg); }
+  .modal h3 { font-size: 18px; margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; }
+  .modal h3 button { font-size: 14px; color: var(--sub); padding: 6px; }
+  label.l { display: block; font-size: 12px; color: var(--sub); margin: 10px 0 3px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  .ph { margin-top: 12px; }
+  .ph .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .ph .th { position: relative; width: 84px; height: 84px; border-radius: 12px; overflow: hidden; background: var(--card); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--sub); }
+  .ph .th img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+  .ph .th .x { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 99px; background: rgba(0,0,0,0.55); color: #fff; font-size: 13px; line-height: 22px; }
+  .ph .add { width: 84px; height: 84px; border-radius: 12px; border: 1.5px dashed var(--line); color: var(--accent); font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .ph .add b { font-size: 22px; line-height: 1; }
+  .err { color: var(--danger); font-size: 13px; margin-top: 8px; }
+  .viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 40; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px; }
+  .viewer.open { display: flex; }
+  .viewer img { max-width: 100%; max-height: 82vh; object-fit: contain; }
+  .viewer .cap { color: #fff; font-size: 13px; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .compare figure { margin: 0; }
+  .compare .im { aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--sub); }
+  .compare img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+  .compare figcaption { font-size: 12px; color: var(--sub); margin-top: 4px; text-align: center; }
+  .card, .modal .box { box-shadow: var(--shadow); }
+  @media (min-width: 900px) {
+    .wrap { max-width: 1100px; padding: 24px 32px 40px; }
+    .cols { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 16px; align-items: start; }
+    .modal { align-items: center; }
+    .modal .box { border-radius: 24px; }
+  }
+  /* ---- ゴルフ ---- */
+  .kpi3 { grid-template-columns: 1fr 1fr 1fr; }
+  .kpi b small { font-size: 12px; font-weight: 500; color: var(--sub); margin-left: 2px; }
+  .chart { margin-top: 12px; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart .ax { font-size: 10px; fill: var(--sub); font-variant-numeric: tabular-nums; }
+  .chart .grid { stroke: var(--line); stroke-width: 1; }
+  .chart .ln { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .chart .dot { fill: var(--card); stroke: var(--accent); stroke-width: 2; }
+  .chart .best { fill: var(--accent); }
+  .chart .avg { stroke: var(--sub); stroke-width: 1; stroke-dasharray: 3 3; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 1px 8px; margin-right: 6px; vertical-align: 1px; }
+  .tag.r { background: var(--ok-bg); color: var(--ok); }
+  .tag.p { background: var(--accent-soft); color: var(--accent); }
+  .item .sc { flex: none; text-align: right; font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .item .sc b { font-size: 20px; }
+  .item .sc span { display: block; font-size: 11px; color: var(--sub); }
+  .seg { display: flex; background: var(--track); border-radius: 99px; padding: 3px; margin-top: 10px; }
+  .seg button { flex: 1; height: 32px; border-radius: 99px; font-size: 13px; font-weight: 600; color: var(--sub); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .chips button { height: 32px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--card); font-size: 13px; }
+  .chips button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .holes { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 13px; }
+  .holes th { font-size: 11px; color: var(--sub); font-weight: 600; padding: 4px 2px; text-align: center; border: 0; }
+  .holes td { padding: 2px; text-align: center; border: 0; }
+  .holes td.no { width: 34px; color: var(--sub); font-weight: 700; }
+  .holes input { padding: 7px 4px; text-align: center; border-radius: 10px; font-variant-numeric: tabular-nums; }
+  .holes input.par { color: var(--sub); }
+  .holes td.diff { width: 40px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .holes tr.sub td { background: var(--track); font-weight: 700; padding: 7px 2px; font-variant-numeric: tabular-nums; }
+  .holes tr.sub td:first-child { border-radius: 10px 0 0 10px; }
+  .holes tr.sub td:last-child { border-radius: 0 10px 10px 0; }
+  .under { color: var(--accent); } .over2 { color: var(--danger); }
+  .tot { display: flex; justify-content: space-around; text-align: center; margin-top: 10px; background: var(--card); border-radius: 14px; padding: 10px; }
+  .tot b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+  .tot small { font-size: 11px; color: var(--sub); }
+  .ptbl td:first-child { white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>ゴルフ</h1><button class="btn-soft" onclick="openEdit(null,'practice')">＋ 練習</button><button class="btn-soft" onclick="openEdit(null,'round')">＋ ラウンド</button></div>
+  <div class="cols">
+    <div><div class="card" id="sum"></div><div class="card" id="prac"></div></div>
+    <div><div class="card" id="list"><div class="empty">読み込み中…</div></div></div>
+  </div>
+</div>
+<div class="modal" id="modal" onclick="if(event.target===this)closeEdit()"><div class="box" id="mbox"></div></div>
+<datalist id="dl-course"></datalist><datalist id="dl-range"></datalist>
+
+<script>
+let G = null, draft = null;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const yen = n => '¥' + Math.round(n || 0).toLocaleString();
+const dt = s => new Date(s + 'T00:00:00');
+const md = s => Number(s.slice(5, 7)) + '/' + Number(s.slice(8));
+const CLUBS = ['ドライバー', 'FW', 'UT', 'アイアン', 'ウェッジ', 'アプローチ', 'バンカー', 'パター'];
+const avg = xs => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
+const r1 = n => Math.round(n * 10) / 10;
+const sign = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + Math.abs(n);
+
+function load(d) { G = d; cacheSet('golf', d); render(); }
+const rounds = () => G.items.filter(x => x.type === 'round');
+const full = x => (x.holes.length || 18) >= 18; // 9ホールだけの回は平均に入れない
+const parOf = x => x.holes.filter(h => h.score).reduce((a, h) => a + h.par, 0);
+
+// ---- まとめ ----
+function render() {
+  const rs = rounds(), fr = rs.filter(full), last5 = fr.slice(0, 5);
+  const best = fr.reduce((b, x) => !b || x.score < b.score ? x : b, null);
+  const withPutt = fr.filter(x => x.putts);
+  let html = `<h2>ラウンド</h2>`;
+  if (!rs.length) html += '<div class="sub" style="margin-top:6px">ラウンドを記録すると、平均スコアやパット数の変化がここに出ます。</div>';
+  else {
+    html += `<div class="kpi kpi3">
+      <div><small>平均スコア</small><b>${last5.length ? r1(avg(last5.map(x => x.score))) : '−'}</b><small>直近${last5.length}回</small></div>
+      <div><small>ベスト</small><b>${best ? best.score : '−'}</b><small>${best ? md(best.date) : ''}</small></div>
+      <div><small>平均パット</small><b>${withPutt.length ? r1(avg(withPutt.slice(0, 5).map(x => x.putts))) : '−'}</b><small>直近${Math.min(5, withPutt.length)}回</small></div></div>`;
+    html += chart(fr.slice(0, 20).reverse());
+    html += parTypes(fr.slice(0, 10));
+  }
+  document.getElementById('sum').innerHTML = html;
+  renderPractice();
+  renderList();
+  document.getElementById('dl-course').innerHTML = [...new Set(rs.map(x => x.place).filter(Boolean))].map(v => `<option value="${esc(v)}">`).join('');
+  document.getElementById('dl-range').innerHTML = [...new Set(G.items.filter(x => x.type === 'practice').map(x => x.place).filter(Boolean))].map(v => `<option value="${esc(v)}">`).join('');
+}
+
+// スコアの推移（直近20ラウンド、18ホールの回だけ）
+function chart(xs) {
+  if (xs.length < 2) return '';
+  const W = 340, H = 140, L = 28, R = 8, T = 10, B = 22;
+  const v = xs.map(x => x.score), lo = Math.floor((Math.min(...v) - 3) / 5) * 5, hi = Math.ceil((Math.max(...v) + 3) / 5) * 5;
+  const X = i => L + (W - L - R) * (xs.length === 1 ? 0.5 : i / (xs.length - 1)), Y = s => T + (H - T - B) * (hi - s) / (hi - lo);
+  const step = hi - lo > 30 ? 10 : 5, ticks = [];
+  for (let s = lo; s <= hi; s += step) ticks.push(s);
+  const a = avg(v), bi = v.indexOf(Math.min(...v));
+  const lab = [0, xs.length - 1].concat(xs.length > 4 ? [Math.round((xs.length - 1) / 2)] : []);
+  return `<div class="chart"><div class="sub">スコアの推移（点線は平均 ${r1(a)}）</div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="スコアの推移">
+    ${ticks.map(s => `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(s)}" y2="${Y(s)}"/><text class="ax" x="${L - 5}" y="${Y(s) + 3}" text-anchor="end">${s}</text>`).join('')}
+    <line class="avg" x1="${L}" x2="${W - R}" y1="${Y(a)}" y2="${Y(a)}"/>
+    <polyline class="ln" points="${xs.map((x, i) => X(i) + ',' + Y(x.score)).join(' ')}"/>
+    ${xs.map((x, i) => `<circle class="${i === bi ? 'best' : 'dot'}" cx="${X(i)}" cy="${Y(x.score)}" r="${i === bi ? 4.5 : 3.5}"><title>${md(x.date)} ${esc(x.place)} ${x.score}</title></circle>`).join('')}
+    ${lab.map(i => `<text class="ax" x="${X(i)}" y="${H - 6}" text-anchor="middle">${md(xs[i].date)}</text>`).join('')}
+  </svg></div>`;
+}
+
+// パー3・4・5 ごとの平均（ホールごとに入れた回だけ）
+function parTypes(xs) {
+  const by = { 3: [], 4: [], 5: [] }, pt = { 3: [], 4: [], 5: [] };
+  xs.forEach(x => x.holes.forEach(h => { if (h.score && by[h.par]) { by[h.par].push(h.score - h.par); if (h.putts != null) pt[h.par].push(h.putts); } }));
+  if (![3, 4, 5].some(p => by[p].length)) return '';
+  return `<table class="ptbl"><thead><tr><th>直近${xs.length}回</th><th>ホール数</th><th>平均</th><th>パーとの差</th><th>パット</th></tr></thead><tbody>
+    ${[3, 4, 5].filter(p => by[p].length).map(p => `<tr><td>パー${p}</td><td>${by[p].length}</td><td>${r1(p + avg(by[p]))}</td><td>${sign(r1(avg(by[p])))}</td><td>${pt[p].length ? r1(avg(pt[p])) : '−'}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderPractice() {
+  const ps = G.items.filter(x => x.type === 'practice'), ym = G.today.slice(0, 7), y = G.today.slice(0, 4);
+  const mo = ps.filter(x => x.date.startsWith(ym)), yr = ps.filter(x => x.date.startsWith(y));
+  const balls = xs => xs.reduce((a, x) => a + x.balls, 0);
+  const money = G.items.filter(x => x.date.startsWith(y)).reduce((a, x) => a + x.price, 0);
+  const cnt = {};
+  ps.filter(x => x.date >= addDays(G.today, -59)).forEach(x => x.clubs.forEach(c => { cnt[c] = (cnt[c] || 0) + 1; }));
+  const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]);
+  const lastR = rounds()[0];
+  const since = lastR ? ps.filter(x => x.date > lastR.date) : [];
+  document.getElementById('prac').innerHTML = `<h2>練習</h2>
+    <div class="kpi kpi3"><div><small>今月</small><b>${mo.length}<small>回</small></b><small>${balls(mo).toLocaleString()}球</small></div>
+      <div><small>${y}年</small><b>${yr.length}<small>回</small></b><small>${balls(yr).toLocaleString()}球</small></div>
+      <div><small>${y}年の費用</small><b style="font-size:19px">${money ? yen(money) : '−'}</b></div></div>
+    ${lastR ? `<div class="sub" style="margin-top:10px">前回のラウンド（${md(lastR.date)}）から練習 ${since.length}回・${balls(since).toLocaleString()}球</div>` : ''}
+    ${top.length ? `<div class="sub" style="margin-top:6px">最近60日でよく練習したクラブ：${top.slice(0, 4).map(c => `${esc(c)} ${cnt[c]}回`).join('・')}</div>` : ''}`;
+}
+function addDays(s, n) { const d = dt(s); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
+function renderList() {
+  const items = G.items;
+  let html = '<h2>履歴</h2>', cur = '';
+  if (!items.length) html += '<div class="empty">まだ記録がありません。<br>右上の「＋ 練習」「＋ ラウンド」から追加できます。</div>';
+  items.forEach(x => {
+    const m = x.date.slice(0, 7);
+    if (m !== cur) {
+      cur = m;
+      const xs = items.filter(i => i.date.startsWith(m)), r = xs.filter(i => i.type === 'round').length, p = xs.length - r;
+      html += `<div class="month"><span>${Number(m.slice(0, 4))}年${Number(m.slice(5))}月</span><span>${[r ? `ラウンド${r}` : '', p ? `練習${p}` : ''].filter(Boolean).join('・')}</span></div>`;
+    }
+    const d = dt(x.date), round = x.type === 'round';
+    const meta = round
+      ? [x.holes.length && x.holes.length < 18 ? `${x.holes.length}ホール` : '', x.memo].filter(Boolean).join('・')
+      : [x.clubs.join('・'), x.memo].filter(Boolean).join('　');
+    const right = round
+      ? `<b>${x.score}</b><span>${x.holes.length ? sign(x.score - parOf(x)) : ''}${x.putts ? `　${x.putts}パット` : ''}</span>`
+      : `${x.balls ? `<b>${x.balls}</b><span>球</span>` : ''}`;
+    html += `<button class="item" onclick="openEdit('${x.id}')"><div class="d"><b>${d.getDate()}</b><span>${'日月火水木金土'[d.getDay()]}</span></div>
+      <div class="body"><div class="nm"><span class="tag ${round ? 'r' : 'p'}">${round ? 'ラウンド' : '練習'}</span>${esc(x.place || (round ? '' : '練習'))}</div>
+      <div class="meta">${esc(meta)}</div></div><div class="sc">${right}</div></button>`;
+  });
+  document.getElementById('list').innerHTML = html;
+}
+
+// ---- 追加・編集 ----
+// 同じコースの前回のパーを入れておく（なければ一般的な並び）
+const STD = [4, 4, 3, 4, 5, 4, 3, 4, 5, 4, 4, 3, 4, 5, 4, 3, 4, 5];
+function parsFor(place) {
+  const prev = rounds().find(x => x.place === place && x.holes.length);
+  return prev ? prev.holes.map(h => h.par) : null;
+}
+function blankHoles(n, pars) { return Array.from({ length: n }, (_, i) => ({ par: (pars && pars[i]) || STD[i], score: '', putts: '' })); }
+
+function openEdit(id, type) {
+  const x = id ? G.items.find(i => i.id === id) : null;
+  if (x) {
+    draft = JSON.parse(JSON.stringify(x));
+    draft.mode = x.type === 'round' && !x.holes.length ? 'total' : 'holes';
+    if (x.type === 'round' && !x.holes.length) draft.holes = blankHoles(18);
+    draft.holes = draft.holes.map(h => ({ par: h.par, score: h.score || '', putts: h.putts == null ? '' : h.putts }));
+  } else {
+    const lastSame = G.items.find(i => i.type === type);
+    draft = { type, date: G.today, place: type === 'practice' && lastSame ? lastSame.place : '', balls: '', clubs: [], score: '', putts: '', price: '', memo: '', mode: 'holes', holes: [] };
+    if (type === 'round') draft.holes = blankHoles(18);
+  }
+  renderEdit();
+  document.getElementById('modal').classList.add('open');
+}
+function closeEdit() { document.getElementById('modal').classList.remove('open'); draft = null; }
+function setF(k, v) { draft[k] = v; }
+function setPlace(v) {
+  draft.place = v;
+  if (draft.type !== 'round') return;
+  const pars = parsFor(v);
+  if (pars && !draft.holes.some(h => h.score)) { draft.holes = blankHoles(pars.length, pars); renderEdit(); }
+}
+function setMode(m) { draft.mode = m; renderEdit(); }
+function setHoles(n) {
+  const pars = parsFor(draft.place);
+  draft.holes = Array.from({ length: n }, (_, i) => draft.holes[i] || { par: (pars && pars[i]) || STD[i], score: '', putts: '' });
+  renderEdit();
+}
+function toggleClub(c) {
+  const i = draft.clubs.indexOf(c);
+  if (i >= 0) draft.clubs.splice(i, 1); else draft.clubs.push(c);
+  renderEdit();
+}
+// ホールの欄は入力のたびに作り直さず、合計と差の表示だけ書き換える（入力中の欄が外れないように）
+function setHole(i, k, v) { draft.holes[i][k] = v; paintTotals(); }
+function diffCls(n) { return n < 0 ? 'under' : n >= 2 ? 'over2' : ''; }
+function paintTotals() {
+  const hs = draft.holes;
+  hs.forEach((h, i) => {
+    const el = document.getElementById('df' + i); if (!el) return;
+    const s = Number(h.score), p = Number(h.par);
+    el.textContent = s ? sign(s - p) : ''; el.className = 'diff ' + (s ? diffCls(s - p) : '');
+  });
+  const part = (a, b) => {
+    const xs = hs.slice(a, b), played = xs.filter(h => Number(h.score));
+    return { par: xs.reduce((t, h) => t + Number(h.par || 0), 0), ppar: played.reduce((t, h) => t + Number(h.par || 0), 0), score: played.reduce((t, h) => t + Number(h.score), 0), putts: played.reduce((t, h) => t + Number(h.putts || 0), 0), n: played.length };
+  };
+  const fill = (id, o) => { const el = document.getElementById(id); if (el) el.innerHTML = `<td>${id === 'sOUT' ? 'OUT' : 'IN'}</td><td>${o.par}</td><td>${o.score || ''}</td><td>${o.putts || ''}</td><td class="diff ${o.n ? diffCls(o.score - o.ppar) : ''}">${o.n ? sign(o.score - o.ppar) : ''}</td>`; };
+  fill('sOUT', part(0, 9)); fill('sIN', part(9, 18));
+  const all = part(0, hs.length), el = document.getElementById('tot');
+  if (el) el.innerHTML = `<div><small>スコア</small><b>${all.score || '−'}</b></div><div><small>パーとの差</small><b class="${all.n ? diffCls(all.score - all.ppar) : ''}">${all.n ? sign(all.score - all.ppar) : '−'}</b></div><div><small>パット</small><b>${all.putts || '−'}</b></div><div><small>入力済み</small><b>${all.n}<small>/${hs.length}</small></b></div>`;
+}
+function holeRow(h, i) {
+  return `<tr><td class="no">${i + 1}</td>
+    <td><input class="par" type="number" inputmode="numeric" min="3" max="6" value="${h.par}" onchange="setHole(${i},'par',this.value)" oninput="setHole(${i},'par',this.value)" aria-label="${i + 1}番 パー"></td>
+    <td><input type="number" inputmode="numeric" min="1" max="20" value="${h.score}" oninput="setHole(${i},'score',this.value)" aria-label="${i + 1}番 打数"></td>
+    <td><input type="number" inputmode="numeric" min="0" max="10" value="${h.putts}" oninput="setHole(${i},'putts',this.value)" aria-label="${i + 1}番 パット"></td>
+    <td class="diff" id="df${i}"></td></tr>`;
+}
+function renderEdit(err) {
+  const d = draft, round = d.type === 'round';
+  let html = `<h3>${round ? 'ラウンド' : '練習'}の記録<button onclick="closeEdit()">閉じる</button></h3>
+    <div class="grid2"><div><label class="l">日付</label><input type="date" value="${d.date}" onchange="setF('date', this.value)"></div>
+      <div><label class="l">${round ? 'プレー代' : '料金'}（円・任意）</label><input type="number" inputmode="numeric" value="${d.price || ''}" placeholder="0" oninput="setF('price', this.value)"></div></div>
+    <label class="l">${round ? 'コース' : '場所（練習場など）'}</label><input list="${round ? 'dl-course' : 'dl-range'}" value="${esc(d.place)}" placeholder="${round ? '例：〇〇カントリークラブ' : '例：〇〇ゴルフセンター'}" onchange="setPlace(this.value)" oninput="draft.place=this.value">`;
+  if (round) {
+    html += `<div class="seg"><button class="${d.mode === 'holes' ? 'on' : ''}" onclick="setMode('holes')">ホールごとに入れる</button><button class="${d.mode === 'total' ? 'on' : ''}" onclick="setMode('total')">合計だけ</button></div>`;
+    if (d.mode === 'holes') {
+      const n = d.holes.length;
+      html += `<div class="seg"><button class="${n === 18 ? 'on' : ''}" onclick="setHoles(18)">18ホール</button><button class="${n === 9 ? 'on' : ''}" onclick="setHoles(9)">9ホール</button></div>
+        <div class="tot" id="tot"></div>
+        <table class="holes"><thead><tr><th></th><th>パー</th><th>打数</th><th>パット</th><th></th></tr></thead><tbody>
+        ${d.holes.slice(0, 9).map(holeRow).join('')}<tr class="sub" id="sOUT"></tr>
+        ${n > 9 ? d.holes.slice(9).map((h, i) => holeRow(h, i + 9)).join('') + '<tr class="sub" id="sIN"></tr>' : ''}
+        </tbody></table>
+        <div class="sub" style="margin-top:4px">パーは同じコースの前回の分を入れておきます。違うときは書き換えてください。</div>`;
+    } else {
+      html += `<div class="grid2"><div><label class="l">スコア</label><input type="number" inputmode="numeric" value="${d.score || ''}" oninput="setF('score', this.value)"></div>
+        <div><label class="l">パット数（任意）</label><input type="number" inputmode="numeric" value="${d.putts || ''}" oninput="setF('putts', this.value)"></div></div>`;
+    }
+  } else {
+    html += `<label class="l">球数</label><input type="number" inputmode="numeric" value="${d.balls || ''}" placeholder="例：100" oninput="setF('balls', this.value)">
+      <label class="l">練習したクラブ</label><div class="chips">${CLUBS.map(c => `<button class="${d.clubs.includes(c) ? 'on' : ''}" onclick="toggleClub('${c}')">${c}</button>`).join('')}</div>`;
+  }
+  html += `<label class="l">メモ（${round ? '天気・同伴者・よかった点・課題など' : '意識したこと・課題・調子など'}）</label><textarea oninput="setF('memo', this.value)">${esc(d.memo)}</textarea>
+    ${err ? `<div class="err">${esc(err)}</div>` : ''}
+    <button class="btn-main" onclick="saveEdit()">${d.id ? '保存する' : '記録する'}</button>
+    ${d.id ? `<div style="text-align:center;margin-top:8px"><button class="btn-del" onclick="delEdit()">この記録を削除</button></div>` : ''}`;
+  document.getElementById('mbox').innerHTML = html;
+  if (round && d.mode === 'holes') paintTotals();
+}
+async function saveEdit() {
+  const d = draft, round = d.type === 'round';
+  const v = { id: d.id, type: d.type, date: d.date, place: d.place, price: d.price, memo: d.memo };
+  if (round) {
+    if (d.mode === 'holes') v.holes = d.holes.map(h => ({ par: Number(h.par) || 4, score: Number(h.score) || 0, putts: h.putts === '' ? null : Number(h.putts) }));
+    else { v.holes = []; v.score = d.score; v.putts = d.putts; }
+    if (!String(d.place || '').trim()) return renderEdit('コース名を入れてください');
+    if (d.mode === 'holes' && !v.holes.some(h => h.score)) return renderEdit('打数を入れてください（合計だけなら「合計だけ」に切り替え）');
+  } else { v.balls = d.balls; v.clubs = d.clubs; }
+  const btn = document.querySelector('#mbox .btn-main'); btn.disabled = true; btn.textContent = '保存中…';
+  try { load(await call('saveGolf', v)); closeEdit(); }
+  catch (e) { renderEdit(e.message || String(e)); }
+}
+async function delEdit() {
+  if (!confirm('この記録を削除します。元に戻せません。よろしいですか？')) return;
+  try { load(await call('deleteGolf', draft.id)); closeEdit(); }
+  catch (e) { renderEdit(e.message || String(e)); }
+}
+
+const hit = cacheGet('golf');
+if (hit) load(hit);
+call('getGolf').then(d => { if (JSON.stringify(d) !== JSON.stringify(G)) load(d); })
+  .catch(e => { if (!hit) document.getElementById('list').innerHTML = `<div class="empty">読み込めませんでした。<br>${esc(e.message || e)}</div>`; });
+</script>
+</body>
+</html>

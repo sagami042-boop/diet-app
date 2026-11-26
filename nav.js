@@ -1,7 +1,7 @@
 // PC（横幅900px以上）は左側のメニュー、スマホは画面下のアイコンメニュー
 (function () {
   const path = location.pathname;
-  const page = path.endsWith('dash.html') ? 'dash' : path.endsWith('foods.html') ? 'foods' : path.endsWith('beauty.html') ? 'beauty' : path.endsWith('run.html') || path.endsWith('vdot.html') ? 'run' : 'log';
+  const page = path.endsWith('dash.html') ? 'dash' : path.endsWith('foods.html') ? 'foods' : path.endsWith('beauty.html') ? 'beauty' : path.endsWith('golf.html') ? 'golf' : path.endsWith('run.html') || path.endsWith('vdot.html') ? 'run' : 'log';
   const icon = d => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const items = [
     ['log', 'index.html', '今日の記録', icon('<path d="M4 6h16M4 12h16M4 18h10"/>')],
@@ -9,6 +9,7 @@
     ['run', 'run.html', 'ランニング', icon('<circle cx="14" cy="4.5" r="2"/><path d="M6 20l3.5-5 3 2.5L14 13l3 3h3M9 11l3-3 3 2 2-1"/>')],
     ['foods', 'foods.html', '食品リスト', icon('<path d="M5 4h14v16H5z"/><path d="M9 8h6M9 12h6M9 16h3"/>')],
     ['beauty', 'beauty.html', '美容', icon('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>')],
+    ['golf', 'golf.html', 'ゴルフ', icon('<path d="M8 20V3l9 3.5L8 10"/><ellipse cx="9" cy="20" rx="6" ry="1.6"/>')],
   ];
   const css = `
     .side-nav { display: none; }
@@ -47,7 +48,8 @@
     <div class="foot" id="nav-goal"></div>`;
   const bar = document.createElement('nav');
   bar.className = 'tab-bar';
-  bar.innerHTML = items.map(([k, href, label, ic]) => `<a href="${href}" class="${k === page ? 'on' : ''}">${ic}${label}</a>`).join('');
+  const SHORT = { log: '記録', dash: 'ダッシュ', run: 'ラン', foods: '食品' }; // 下のメニューは6個並ぶので短い名前にする
+  bar.innerHTML = items.map(([k, href, label, ic]) => `<a href="${href}" class="${k === page ? 'on' : ''}">${ic}${SHORT[k] || label}</a>`).join('');
   window.NAV_BURGER = ''; // 以前の右上メニューボタン（下のメニューに置き換えたので空）
 
   // 画面側から目標などを表示してもらう（メニューを置く前に呼ばれても、置いた時点で反映する）
