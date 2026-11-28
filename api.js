@@ -44,7 +44,7 @@ async function call(fn, ...args) {
   if (!key) throw new Error('合言葉が入力されていません。ページを開き直して入力してください。');
   // text/plain で送ると CORS の事前確認が不要になる。通信が一瞬切れた場合に備えて、読み込みは2回まで再試行
   // 何度送っても結果が同じ処理（読み込み・読み取り・1日分の上書き保存・メモ）は、通信が切れたら2回までやり直す
-  const body = JSON.stringify({ key, fn, args }), safe = /^(getInit|getDay|getDashboard|getRunning|readLabel|readRunShots|parseMeal|parseMealPhotos|getBeauty|getGolf|readScorecards|saveDay|saveNote)$/.test(fn);
+  const body = JSON.stringify({ key, fn, args }), safe = /^(getInit|getDay|getDashboard|getRunning|readLabel|readRunShots|parseMeal|parseMealPhotos|getBeauty|getGolf|readScorecards|scoreJob|saveDay|saveNote)$/.test(fn);
   let res;
   inflight++;
   try {
